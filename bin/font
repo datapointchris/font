@@ -61,6 +61,7 @@ usage() {
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
+  upgrade              Update font to latest version (git pull)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 EOF
@@ -121,6 +122,7 @@ Commands
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
+  upgrade              Update font to latest version (git pull)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 
@@ -855,6 +857,19 @@ main() {
       ;;
     clear-cache)
       clear_preview_cache
+      ;;
+    upgrade|update)
+      echo "Upgrading font..."
+      if ! git -C "$FONT_APP_DIR" remote get-url origin &>/dev/null; then
+        echo "No remote configured. Run: git -C ~/tools/font remote add origin <url>"
+        exit 1
+      fi
+      if git -C "$FONT_APP_DIR" pull --quiet; then
+        echo "✓ font upgraded successfully"
+      else
+        echo "✗ font upgrade failed" >&2
+        exit 1
+      fi
       ;;
     download|install)
       echo "⚠️  DEPRECATED: Font installation has moved to management scripts"
