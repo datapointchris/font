@@ -1,0 +1,878 @@
+#!/usr/bin/env bash
+# Font management - built on tested library
+# fzf integration layer on top of font library
+
+set -euo pipefail
+
+# Source the library (handle symlinks)
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+if [[ -L "$SCRIPT_PATH" ]]; then
+  # Get absolute path of symlink target
+  SCRIPT_PATH="$(python3 -c "import os; print(os.path.realpath('$SCRIPT_PATH'))")"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source formatting library for colorized help
+if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
+  source "$HOME/.local/shell/formatting.sh"
+elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
+  source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
+fi
+
+source "$FONT_APP_DIR/lib/lib.sh"
+source "$FONT_APP_DIR/lib/storage.sh"
+
+# Config file locations
+GHOSTTY_FONT_CONFIG="$HOME/.config/ghostty/fonts/current.conf"
+KITTY_FONT_CONFIG="$HOME/.config/kitty/fonts/current.conf"
+
+# Rename original list_fonts and create filtered version
+eval "$(declare -f list_fonts | sed '1s/list_fonts/list_fonts_unfiltered/')"
+
+# Override list_fonts to filter out rejected fonts
+list_fonts() {
+  list_fonts_unfiltered | while IFS= read -r font; do
+    if ! is_font_rejected "$font"; then
+      echo "$font"
+    fi
+  done
+}
+
+usage() {
+  # Check if formatting functions are available
+  if command -v print_header &>/dev/null; then
+    print_section "Font Testing & Management" "yellow"
+
+    print_section "Commands" "blue"
+    cat <<'EOF'
+  current              Show currently active font
+  change               Interactive font picker with previews
+  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  size-up              Increase font size by 1
+  size-down            Decrease font size by 1
+  like [message]       Like current font with optional reason
+  dislike [message]    Dislike current font with optional reason
+  note <message>       Add note to current font (message required)
+  random               Apply random font from all available fonts
+  rank                 Show fonts ranked by likes/dislikes
+  log                  View complete history
+  list                 List all available font families
+  reject <message>     Mark current font as rejected (avoids rediscovery)
+  rejected             List all rejected fonts
+  unreject             Restore a rejected font (fzf picker with history)
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
+EOF
+
+    print_section "Examples" "yellow"
+    if command -v print_cyan &>/dev/null; then
+      echo "  $(print_cyan "font change")                         # Interactive picker"
+      echo "  $(print_cyan "font size-up")                        # Increase font size"
+      echo "  $(print_cyan "font size-down")                      # Decrease font size"
+      echo "  $(print_cyan "font like \"Great ligatures\"")         # Like with reason"
+      echo "  $(print_cyan "font dislike \"Too wide\"")             # Dislike with reason"
+      echo "  $(print_cyan "font note \"Good for prose\"")          # Add note"
+      echo "  $(print_cyan "font rank")                            # See rankings"
+      echo "  $(print_cyan "font log")                             # View history"
+    else
+      cat <<'EOF'
+  font change                         # Interactive picker
+  font size-up                        # Increase font size
+  font size-down                      # Decrease font size
+  font like "Great ligatures"         # Like with reason
+  font dislike "Too wide"             # Dislike with reason
+  font note "Good for prose"          # Add note
+  font rank                           # See rankings
+  font log                            # View history
+EOF
+    fi
+
+    print_section "Data Storage" "green"
+    cat <<'EOF'
+  History:  ~/.config/font/history-{platform}.jsonl
+  Rejected: ~/.config/font/rejected-fonts-{platform}.json
+
+  Per-platform files eliminate git merge conflicts.
+  View locations: font log
+EOF
+
+  else
+    # Fallback for when formatting library is not available
+    cat <<'EOF'
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Font Management
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Commands
+─────────────────────────
+  current              Show currently active font
+  change               Interactive font picker with previews
+  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  size-up              Increase font size by 1
+  size-down            Decrease font size by 1
+  like [message]       Like current font with optional reason
+  dislike [message]    Dislike current font with optional reason
+  note <message>       Add note to current font (message required)
+  random               Apply random font from all available fonts
+  rank                 Show fonts ranked by likes/dislikes
+  log                  View complete history
+  list                 List all available font families
+  reject <message>     Mark current font as rejected (avoids rediscovery)
+  rejected             List all rejected fonts
+  unreject             Restore a rejected font (fzf picker with history)
+  generate-previews    Pre-generate all preview images
+  clear-cache          Clear preview cache
+
+Examples
+─────────────────────────
+  font change                         # Interactive picker
+  font size-up                        # Increase font size
+  font size-down                      # Decrease font size
+  font like "Great ligatures"         # Like with reason
+  font dislike "Too wide"             # Dislike with reason
+  font note "Good for prose"          # Add note
+  font rank                           # See rankings
+  font log                            # View history
+
+Data Storage
+─────────────────────────
+  History:  ~/.config/font/history-{platform}.jsonl
+  Rejected: ~/.config/font/rejected-fonts-{platform}.json
+
+  Per-platform files eliminate git merge conflicts.
+  View locations: font log
+
+EOF
+  fi
+}
+
+#==============================================================================
+# UTILITY FUNCTIONS
+# ==============================================================================
+
+format_duration() {
+  local seconds="$1"
+
+  if [[ "$seconds" -lt 60 ]]; then
+    echo "${seconds}s"
+  elif [[ "$seconds" -lt 3600 ]]; then
+    local mins=$((seconds / 60))
+    echo "${mins}m"
+  elif [[ "$seconds" -lt 86400 ]]; then
+    local hours=$((seconds / 3600))
+    local mins=$(((seconds % 3600) / 60))
+    if [[ "$mins" -gt 0 ]]; then
+      echo "${hours}h ${mins}m"
+    else
+      echo "${hours}h"
+    fi
+  else
+    local days=$((seconds / 86400))
+    local hours=$(((seconds % 86400) / 3600))
+    if [[ "$hours" -gt 0 ]]; then
+      echo "${days}d ${hours}h"
+    else
+      echo "${days}d"
+    fi
+  fi
+}
+
+#==============================================================================
+# FONT OPERATIONS
+# ==============================================================================
+
+get_current_font() {
+  if [[ -f "$GHOSTTY_FONT_CONFIG" ]]; then
+    grep "^font-family" "$GHOSTTY_FONT_CONFIG" | cut -d= -f2 | tr -d '"' | xargs
+  else
+    echo "Unknown"
+  fi
+}
+
+get_current_font_size() {
+  if [[ -f "$GHOSTTY_FONT_CONFIG" ]]; then
+    grep "^font-size" "$GHOSTTY_FONT_CONFIG" | cut -d= -f2 | xargs
+  else
+    echo "Unknown"
+  fi
+}
+
+change_font_size() {
+  local delta="$1"
+  local current_size
+  current_size=$(get_current_font_size)
+
+  if [[ "$current_size" == "Unknown" ]]; then
+    echo "Error: Could not read current font size"
+    echo "Run 'font apply <name>' first to initialize font config"
+    exit 1
+  fi
+
+  local new_size=$((current_size + delta))
+
+  # Enforce reasonable bounds
+  if [[ "$new_size" -lt 6 ]]; then
+    echo "Error: Font size cannot be less than 6"
+    exit 1
+  elif [[ "$new_size" -gt 72 ]]; then
+    echo "Error: Font size cannot be greater than 72"
+    exit 1
+  fi
+
+  local current_font
+  current_font=$(get_current_font)
+
+  local updated=()
+
+  # Update Ghostty fonts config
+  if [[ -f "$GHOSTTY_FONT_CONFIG" ]]; then
+    cat > "$GHOSTTY_FONT_CONFIG" << EOF
+# Generated by 'font apply' - do not edit manually
+font-family = "${current_font}"
+font-size = ${new_size}
+EOF
+    updated+=("ghostty")
+  fi
+
+  # Update Kitty fonts config
+  if [[ -f "$KITTY_FONT_CONFIG" ]]; then
+    cat > "$KITTY_FONT_CONFIG" << EOF
+# Generated by 'font apply' - do not edit manually
+font_family ${current_font}
+font_size ${new_size}.0
+EOF
+    pkill -USR1 kitty 2>/dev/null || true
+    updated+=("kitty")
+  fi
+
+  echo "Font size: $current_size → $new_size"
+  if [[ ${#updated[@]} -gt 0 ]]; then
+    echo "Updated: ${updated[*]}"
+  fi
+  echo ""
+  echo "Restart terminal to see changes."
+}
+
+apply_font() {
+  local font="$1"
+  local platform
+  platform=$(detect_platform)
+
+  echo "Applying font: $font"
+
+  local applied=()
+
+  # Ghostty (macOS and Arch)
+  if [[ "$platform" == "macos" ]] || [[ "$platform" == "arch" ]]; then
+    if apply_font_ghostty "$font" 2>/dev/null; then
+      applied+=("ghostty")
+    fi
+  fi
+
+  # Kitty (macOS and Arch)
+  if [[ "$platform" == "macos" ]] || [[ "$platform" == "arch" ]]; then
+    if apply_font_kitty "$font" 2>/dev/null; then
+      applied+=("kitty")
+    fi
+  fi
+
+  # Arch-specific apps
+  if [[ "$platform" == "arch" ]]; then
+    if apply_font_waybar "$font" 2>/dev/null; then
+      applied+=("waybar")
+    fi
+
+    if apply_font_hyprlock "$font" 2>/dev/null; then
+      applied+=("hyprlock")
+    fi
+
+    if apply_font_dunst "$font" 2>/dev/null; then
+      applied+=("dunst")
+    fi
+  fi
+
+  # Windows Terminal (WSL only)
+  if [[ "$platform" == "wsl" ]]; then
+    if apply_font_windows_terminal "$font" 2>/dev/null; then
+      applied+=("windows-terminal")
+    fi
+  fi
+
+  # Log the apply action
+  log_action "apply" "$font"
+
+  echo ""
+  if [[ ${#applied[@]} -gt 0 ]]; then
+    echo "Applied to: ${applied[*]}"
+  fi
+  echo ""
+  echo "Font applied! Restart terminal to see all changes."
+}
+
+mark_liked() {
+  local message="$*"
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
+
+  log_action "like" "$font" "$message"
+  echo "✓ Liked: $font"
+  [[ -n "$message" ]] && echo "  Reason: $message"
+}
+
+mark_disliked() {
+  local message="$*"
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
+
+  log_action "dislike" "$font" "$message"
+  echo "✓ Disliked: $font"
+  [[ -n "$message" ]] && echo "  Reason: $message"
+}
+
+add_note() {
+  local message="$*"
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
+
+  if [[ -z "$message" ]]; then
+    echo "Error: Note message required"
+    echo "Usage: font note <message>"
+    exit 1
+  fi
+
+  log_action "note" "$font" "$message"
+  echo "✓ Added note to: $font"
+  echo "  Note: $message"
+}
+
+mark_rejected() {
+  local reason="$*"
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "Error: No font currently configured"
+    exit 1
+  fi
+
+  if [[ -z "$reason" ]]; then
+    echo "Error: Rejection reason required"
+    echo "Usage: font reject <message>"
+    exit 1
+  fi
+
+  reject_font "$font" "$reason"
+  log_action "reject" "$font" "$reason"
+  echo "✓ Marked as rejected: $font"
+  echo "  Reason: $reason"
+  echo ""
+  echo "This font will be tracked to avoid rediscovery."
+}
+
+show_rejected() {
+  local rejected
+  rejected=$(list_rejected_fonts)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected fonts yet."
+    echo ""
+    echo "When you try a font and don't like it, mark it as rejected:"
+    echo "  font reject \"Font Name\" \"reason\""
+    return
+  fi
+
+  echo ""
+  echo "Rejected Fonts"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  local count=0
+  while IFS= read -r line; do
+    count=$((count + 1))
+    local font=$(echo "$line" | jq -r '.font')
+    local rejected_date=$(echo "$line" | jq -r '.rejected_date')
+    local reason=$(echo "$line" | jq -r '.reason')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+
+    # Format date
+    local date_formatted
+    if date --version &>/dev/null 2>&1; then
+      # GNU date
+      date_formatted=$(date -d "$rejected_date" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    else
+      # BSD date (macOS)
+      date_formatted=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${rejected_date:0:19}" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
+    fi
+
+    echo "$count. $font"
+    echo "   Rejected: $date_formatted"
+    echo "   Reason: $reason"
+    [[ -n "$platforms" ]] && echo "   Platforms: $platforms"
+    echo ""
+  done < <(echo "$rejected")
+
+  echo "Total rejected: $count"
+  echo ""
+}
+
+unreject_font_interactive() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  local rejected
+  rejected=$(list_rejected_fonts)
+
+  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
+    echo "No rejected fonts to unreject."
+    return
+  fi
+
+  # Build list of rejected font names
+  local font_names
+  font_names=$(echo "$rejected" | jq -r '.font')
+
+  if [[ -z "$font_names" ]]; then
+    echo "No rejected fonts to unreject."
+    return
+  fi
+
+  # Create preview script that shows font history
+  local preview_script="/tmp/font-unreject-preview-$$.sh"
+  cat > "$preview_script" <<'PREVIEW_EOF'
+#!/bin/bash
+font="$1"
+FONT_APP_DIR="$2"
+
+source "$FONT_APP_DIR/lib/storage.sh"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Font: $font"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Show rejection info
+echo "REJECTION INFO:"
+echo "───────────────────────────────────────────────────"
+rejection_info=$(get_rejected_font_info "$font")
+if [[ -n "$rejection_info" ]] && [[ "$rejection_info" != "{}" ]]; then
+  rejected_date=$(echo "$rejection_info" | jq -r '.rejected_date // "unknown"')
+  reason=$(echo "$rejection_info" | jq -r '.reason // "No reason"')
+  platforms=$(echo "$rejection_info" | jq -r '.platforms | join(", ") // "unknown"')
+  echo "  Date: $rejected_date"
+  echo "  Reason: $reason"
+  echo "  Platforms: $platforms"
+else
+  echo "  No rejection info found"
+fi
+echo ""
+
+# Show full history
+echo "FULL HISTORY:"
+echo "───────────────────────────────────────────────────"
+history=$(get_history | jq -c --arg font "$font" '.[] | select(.font == $font)')
+if [[ -n "$history" ]]; then
+  echo "$history" | while IFS= read -r line; do
+    ts=$(echo "$line" | jq -r '.ts')
+    action=$(echo "$line" | jq -r '.action')
+    platform=$(echo "$line" | jq -r '.platform')
+    message=$(echo "$line" | jq -r '.message // empty')
+
+    # Format timestamp
+    date_part="${ts:0:10}"
+
+    if [[ -n "$message" ]]; then
+      printf "  %s | %-8s | %s | %s\n" "$date_part" "$action" "$platform" "$message"
+    else
+      printf "  %s | %-8s | %s\n" "$date_part" "$action" "$platform"
+    fi
+  done
+else
+  echo "  No history found"
+fi
+echo ""
+
+# Show stats summary
+echo "STATS SUMMARY:"
+echo "───────────────────────────────────────────────────"
+stats=$(get_font_stats "$font" 2>/dev/null)
+if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
+  likes=$(echo "$stats" | jq -r '.likes // 0')
+  dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+  applies=$(echo "$stats" | jq -r '.applies // 0')
+  score=$(echo "$stats" | jq -r '.score // 0')
+  printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+  echo "  Times applied: $applies"
+else
+  echo "  No stats available"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  # Run fzf with preview
+  local selected
+  selected=$(echo "$font_names" | fzf \
+    --prompt="Select font to unreject > " \
+    --height=80% \
+    --preview="$preview_script {} '$FONT_APP_DIR'" \
+    --preview-window=right:60%)
+
+  # Cleanup
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    unreject_font "$selected"
+    log_action "unreject" "$selected"
+    echo "Unrejected: $selected"
+    echo ""
+    echo "This font is now available in the font list again."
+  fi
+}
+
+show_rankings() {
+  local rankings
+  rankings=$(get_rankings)
+
+  if [[ -z "$rankings" ]] || [[ "$rankings" == "null" ]]; then
+    echo "No font data yet. Start using fonts and marking likes/dislikes!"
+    return
+  fi
+
+  echo ""
+  echo "Font Rankings (by score and recent usage)"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  local rank=0
+  while IFS= read -r line; do
+    rank=$((rank + 1))
+    local font=$(echo "$line" | jq -r '.font')
+    local score=$(echo "$line" | jq -r '.score')
+    local likes=$(echo "$line" | jq -r '.likes')
+    local dislikes=$(echo "$line" | jq -r '.dislikes')
+    local last_used=$(echo "$line" | jq -r '.last_used')
+    local platforms=$(echo "$line" | jq -r '.platforms')
+    local usage_seconds=$(echo "$line" | jq -r '.usage_seconds // 0')
+
+    # Format last used
+    if [[ "$last_used" == "never" ]]; then
+      last_used="never used"
+    else
+      last_used=$(date -d "$last_used" "+%b %d, %Y" 2>/dev/null || echo "$last_used")
+    fi
+
+    # Format usage time
+    local usage_time="not used"
+    if [[ "$usage_seconds" -gt 0 ]]; then
+      usage_time=$(format_duration "$usage_seconds")
+    fi
+
+    printf "%2d. %s\n" "$rank" "$font"
+    printf "    Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "    Usage time: %s\n" "$usage_time"
+    printf "    Last used: %s\n" "$last_used"
+    printf "    Platforms: %s\n" "$platforms"
+    echo ""
+  done <<< "$rankings"
+}
+
+show_current_font() {
+  local font
+  font=$(get_current_font)
+
+  if [[ "$font" == "Unknown" ]]; then
+    echo "No font currently configured"
+    return
+  fi
+
+  display_font_details "$font" "full"
+}
+
+show_log() {
+  local history
+  history=$(get_history_raw)
+
+  if [[ -z "$history" ]]; then
+    echo "No history yet. Start using fonts!"
+    return
+  fi
+
+  echo ""
+  echo "Font History Log"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  # Show log file locations
+  echo "Data files:"
+  for file in "$FONT_DATA_DIR"/history-*.jsonl; do
+    if [[ -f "$file" ]]; then
+      local platform=$(basename "$file" .jsonl | sed 's/history-//')
+      local count=$(wc -l < "$file" | xargs)
+      printf "  history-%s: %s (%d entries)\n" "$platform" "$file" "$count"
+    fi
+  done
+  local rejected_file
+  rejected_file=$(get_rejected_fonts_file)
+  if [[ -f "$rejected_file" ]]; then
+    local rejected_count=$(jq 'keys | length' "$rejected_file")
+    printf "  rejected:   %s (%d fonts)\n" "$rejected_file" "$rejected_count"
+  fi
+  echo ""
+
+  # Format and display with color if bat is available
+  if command -v bat &>/dev/null; then
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      (if .message then " | \(.message)" else "" end)
+    ' | bat --plain --language=log --theme=base16
+  else
+    echo "$history" | jq -r '
+      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      (if .message then " | \(.message)" else "" end)
+    '
+  fi
+}
+
+#==============================================================================
+# FZF PREVIEW INTEGRATION
+# ==============================================================================
+
+change_font() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  if ! command -v magick &>/dev/null; then
+    echo "Error: ImageMagick not found. Install with: brew install imagemagick"
+    exit 1
+  fi
+
+  # Check for image display tool
+  if ! command -v chafa &>/dev/null && ! command -v viu &>/dev/null; then
+    echo "Note: Install 'chafa' or 'viu' for image preview support"
+    echo "  brew install chafa"
+    echo ""
+    echo "Continuing with text-based preview..."
+    sleep 2
+  fi
+
+  # Create cache directory
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  # Create a simple preview script
+  local preview_script="/tmp/font-fzf-preview-$$.sh"
+  local preview_log="/tmp/font-preview-debug.log"
+  cat > "$preview_script" <<PREVIEW_EOF
+#!/bin/bash
+# Debug: Log to file
+exec 2>>"$preview_log"
+echo "=== Preview for: \$1 ===" >>"$preview_log"
+echo "FONT_APP_DIR: $FONT_APP_DIR" >>"$preview_log"
+
+# Load library functions
+if ! source "$FONT_APP_DIR/lib/lib.sh" 2>>"$preview_log"; then
+  echo "ERROR: Failed to source $FONT_APP_DIR/lib/lib.sh"
+  echo "Check $preview_log for details"
+  exit 1
+fi
+
+font="\$1"
+
+# Get or generate preview
+if [[ -n "\${TMUX:-}" ]]; then
+  # Graphics preview doesn't work in tmux - show text details only
+  display_font_details "\$font" "compact"
+  echo ""
+  echo "Graphics preview not available in tmux."
+  echo "Open a regular terminal window to see font preview."
+elif preview_file=\$(get_or_generate_preview "\$font" 2>>"$preview_log"); then
+  echo "Preview file: \$preview_file" >>"$preview_log"
+  # Display font details at the top
+  display_font_details "\$font" "compact"
+  # Add blank lines to push graphics down (so they don't overlap the text)
+  echo ""
+  echo ""
+  echo ""
+  # Display graphics preview below the text
+  if command -v chafa &>/dev/null; then
+    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
+  elif command -v viu &>/dev/null; then
+    viu -w 80 "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
+  else
+    echo "(Install chafa or viu for image preview)"
+  fi
+else
+  echo "Failed to generate preview"
+  echo "Check $preview_log for details"
+fi
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  # Run fzf
+  local selected
+  selected=$(list_fonts | fzf \
+    --prompt="Select font > " \
+    --height=100% \
+    --preview="$preview_script {}" \
+    --preview-window=right:80%)
+
+  # Cleanup
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    apply_font "$selected"
+  fi
+}
+
+random_font() {
+  mapfile -t all_fonts < <(list_fonts)
+
+  if [[ ${#all_fonts[@]} -eq 0 ]]; then
+    echo "Error: No fonts found"
+    exit 1
+  fi
+
+  local selected_font="${all_fonts[$RANDOM % ${#all_fonts[@]}]}"
+
+  echo "🎲 Randomly selected: $selected_font"
+  echo ""
+  apply_font "$selected_font"
+}
+
+generate_all_previews() {
+  echo "Pre-generating all font previews..."
+  echo "This will take a few minutes but makes browsing instant."
+  echo ""
+
+  mkdir -p "$PREVIEW_CACHE_DIR"
+
+  local total=$(list_fonts | wc -l | xargs)
+  local current=0
+
+  while IFS= read -r font; do
+    current=$((current + 1))
+    printf "[%d/%d] Generating preview for: %s\n" "$current" "$total" "$font"
+
+    local cache_file=$(get_cached_preview_path "$font")
+
+    # Skip if already exists and is valid
+    if [[ -f "$cache_file" ]] && validate_preview_image "$cache_file" &>/dev/null; then
+      echo "  ✓ Already exists"
+      continue
+    fi
+
+    if generate_font_preview "$font" "$cache_file" 2>/dev/null; then
+      echo "  ✓ Generated"
+    else
+      echo "  ✗ Failed"
+    fi
+  done < <(list_fonts)
+
+  echo ""
+  echo "✓ All previews generated!"
+  echo "  Cache location: $PREVIEW_CACHE_DIR"
+  echo "  Run 'font preview' for instant browsing"
+}
+
+#==============================================================================
+# MAIN COMMAND DISPATCHER
+# ==============================================================================
+
+main() {
+  case "${1:-}" in
+    list)
+      list_fonts
+      ;;
+    current)
+      show_current_font
+      ;;
+    change)
+      change_font
+      ;;
+    apply)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: Font name required"
+        usage
+        exit 1
+      fi
+      apply_font "$2"
+      ;;
+    size-up)
+      change_font_size 1
+      ;;
+    size-down)
+      change_font_size -1
+      ;;
+    like)
+      mark_liked "${@:2}"
+      ;;
+    dislike)
+      mark_disliked "${@:2}"
+      ;;
+    note)
+      add_note "${@:2}"
+      ;;
+    random)
+      random_font
+      ;;
+    rank)
+      show_rankings
+      ;;
+    log)
+      show_log
+      ;;
+    reject)
+      mark_rejected "${@:2}"
+      ;;
+    rejected)
+      show_rejected
+      ;;
+    unreject)
+      unreject_font_interactive
+      ;;
+    generate-previews)
+      generate_all_previews
+      ;;
+    clear-cache)
+      clear_preview_cache
+      ;;
+    download|install)
+      echo "⚠️  DEPRECATED: Font installation has moved to management scripts"
+      echo ""
+      echo "Use these commands instead:"
+      echo "  task fonts:download    # Download coding fonts"
+      echo "  task fonts:install     # Install fonts to system"
+      echo ""
+      echo "Or run directly:"
+      echo "  bash management/scripts/fonts/download.sh"
+      echo "  bash management/scripts/fonts/install.sh"
+      exit 1
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
