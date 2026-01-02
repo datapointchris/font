@@ -860,10 +860,6 @@ main() {
       ;;
     upgrade|update)
       echo "Upgrading font..."
-      if ! git -C "$FONT_APP_DIR" remote get-url origin &>/dev/null; then
-        echo "No remote configured. Run: git -C $FONT_APP_DIR remote add origin <url>"
-        exit 1
-      fi
       if git -C "$FONT_APP_DIR" pull --quiet; then
         echo "✓ font upgraded successfully"
       else
