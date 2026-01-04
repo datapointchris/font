@@ -240,6 +240,15 @@ get_font_notes() {
   '
 }
 
+get_last_terminal_context() {
+  local font="$1"
+
+  get_history | jq --arg font "$font" '
+    map(select(.font == $font and .action == "apply")) |
+    sort_by(.ts) | last // {}
+  '
+}
+
 count_total_actions() {
   get_history | jq 'length'
 }

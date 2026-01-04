@@ -88,11 +88,11 @@ EOF
 
     print_section "Data Storage" "green"
     cat <<'EOF'
-  History:  ~/.config/font/history-{platform}.jsonl
-  Rejected: ~/.config/font/rejected-fonts-{platform}.json
+  History: ~/.local/state/font/history.jsonl
+  Cache:   ~/.cache/font/previews/
 
-  Per-platform files eliminate git merge conflicts.
-  View locations: font log
+  Single history file with terminal context, synced across machines.
+  View details: font log
 EOF
 
   else
@@ -136,11 +136,11 @@ Examples
 
 Data Storage
 ─────────────────────────
-  History:  ~/.config/font/history-{platform}.jsonl
-  Rejected: ~/.config/font/rejected-fonts-{platform}.json
+  History: ~/.local/state/font/history.jsonl
+  Cache:   ~/.cache/font/previews/
 
-  Per-platform files eliminate git merge conflicts.
-  View locations: font log
+  Single history file with terminal context, synced across machines.
+  View details: font log
 
 EOF
   fi
@@ -532,32 +532,25 @@ show_log() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
-  # Show log file locations
-  echo "Data files:"
-  for file in "$FONT_DATA_DIR"/history-*.jsonl; do
-    if [[ -f "$file" ]]; then
-      local platform=$(basename "$file" .jsonl | sed 's/history-//')
-      local count=$(wc -l < "$file" | xargs)
-      printf "  history-%s: %s (%d entries)\n" "$platform" "$file" "$count"
-    fi
-  done
-  local rejected_file
-  rejected_file=$(get_rejected_fonts_file)
-  if [[ -f "$rejected_file" ]]; then
-    local rejected_count=$(jq 'keys | length' "$rejected_file")
-    printf "  rejected:   %s (%d fonts)\n" "$rejected_file" "$rejected_count"
+  # Show data file info
+  echo "Data file: $FONT_HISTORY_FILE"
+  if [[ -f "$FONT_HISTORY_FILE" ]]; then
+    local entry_count=$(wc -l < "$FONT_HISTORY_FILE" | xargs)
+    local rejected_count=$(jq -s 'map(select(.action == "reject")) | length' "$FONT_HISTORY_FILE")
+    printf "  Entries: %d\n" "$entry_count"
+    printf "  Rejected fonts: %d\n" "$rejected_count"
   fi
   echo ""
 
   # Format and display with color if bat is available
   if command -v bat &>/dev/null; then
     echo "$history" | jq -r '
-      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
       (if .message then " | \(.message)" else "" end)
     ' | bat --plain --language=log --theme=base16
   else
     echo "$history" | jq -r '
-      "\(.ts) | \(.platform) | \(.action) | \(.font)" +
+      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
       (if .message then " | \(.message)" else "" end)
     '
   fi

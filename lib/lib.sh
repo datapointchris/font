@@ -421,6 +421,30 @@ display_font_details() {
         printf "  Notes: %d\n" "$notes"
         printf "  Times applied: %d\n" "$applies"
         printf "  Platforms: %s\n" "$platforms"
+        local machines=$(echo "$stats" | jq -r '.machines | join(", ") // "unknown"')
+        printf "  Machines: %s\n" "$machines"
+
+        # Show terminal context from last apply
+        if type -t get_last_terminal_context &>/dev/null; then
+          local ctx
+          ctx=$(get_last_terminal_context "$font" 2>/dev/null)
+          if [[ -n "$ctx" ]] && [[ "$ctx" != "{}" ]] && [[ "$ctx" != "null" ]]; then
+            local terminal=$(echo "$ctx" | jq -r '.terminal // "unknown"')
+            local in_tmux=$(echo "$ctx" | jq -r '.in_tmux // "unknown"')
+            local cols=$(echo "$ctx" | jq -r '.cols // "unknown"')
+            local rows=$(echo "$ctx" | jq -r '.rows // "unknown"')
+            local resolution=$(echo "$ctx" | jq -r '.resolution // "unknown"')
+            local font_size=$(echo "$ctx" | jq -r '.font_size // "unknown"')
+
+            echo ""
+            echo "Last Session:"
+            printf "  Terminal: %s\n" "$terminal"
+            [[ "$cols" != "null" && "$cols" != "unknown" ]] && printf "  Size: %sx%s (cols x rows)\n" "$cols" "$rows"
+            [[ "$font_size" != "null" && "$font_size" != "unknown" ]] && printf "  Font size: %s\n" "$font_size"
+            [[ "$resolution" != "null" && "$resolution" != "unknown" ]] && printf "  Resolution: %s\n" "$resolution"
+            [[ "$in_tmux" != "null" ]] && printf "  In tmux: %s\n" "$in_tmux"
+          fi
+        fi
       else
         # Compact format for preview
         printf "Score: %+d (%d↑ %d↓)" "$score" "$likes" "$dislikes"
