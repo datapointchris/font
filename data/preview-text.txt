@@ -1,0 +1,22 @@
+# Font Preview Sample Text
+# Used for testing font rendering
+
+The quick brown fox jumps over the lazy dog.
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+
+# Programming Characters
+() {} [] <> || && == != <= >= => -> :: //
+!@#$%^&*()_+-=[]{}|;':",.<>?/\`~
+
+# Code Sample
+def process(data: Dict[str, Any]) -> Optional[List]:
+    return [x**2 for x in data if x > 0]
+
+func main() {
+    fmt.Println("Hello, World!")
+}
+
+# Ligatures Test
+== != === !== <= >= => -> <-> ++ -- && || ::
