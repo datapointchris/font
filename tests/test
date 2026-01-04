@@ -4,10 +4,11 @@
 
 set -euo pipefail
 
-# Source the library
+# Source the libraries
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$FONT_APP_DIR/lib/lib.sh"
+source "$FONT_APP_DIR/lib/storage.sh"
 
 # Colors for output
 RED='\033[0;31m'
@@ -325,6 +326,121 @@ test_display_preview() {
 }
 
 # ==============================================================================
+# TERMINAL DETECTION TESTS
+# ==============================================================================
+
+test_terminal_detection() {
+  test_start "Terminal detection"
+
+  # Source terminal.sh
+  source "$FONT_APP_DIR/lib/terminal.sh"
+
+  # Test Ghostty detection
+  local result
+  result=$(GHOSTTY_RESOURCES_DIR="/fake" KITTY_WINDOW_ID="" WT_SESSION="" detect_terminal)
+  if [[ "$result" == "ghostty" ]]; then
+    test_pass "Ghostty detected via GHOSTTY_RESOURCES_DIR"
+  else
+    test_fail "Ghostty detection failed (got: $result)"
+  fi
+
+  # Test Kitty detection
+  result=$(GHOSTTY_RESOURCES_DIR="" KITTY_WINDOW_ID="123" WT_SESSION="" detect_terminal)
+  if [[ "$result" == "kitty" ]]; then
+    test_pass "Kitty detected via KITTY_WINDOW_ID"
+  else
+    test_fail "Kitty detection failed (got: $result)"
+  fi
+
+  # Test Windows Terminal detection
+  result=$(GHOSTTY_RESOURCES_DIR="" KITTY_WINDOW_ID="" WT_SESSION="abc" detect_terminal)
+  if [[ "$result" == "windows_terminal" ]]; then
+    test_pass "Windows Terminal detected via WT_SESSION"
+  else
+    test_fail "Windows Terminal detection failed (got: $result)"
+  fi
+
+  # Test unknown terminal
+  result=$(GHOSTTY_RESOURCES_DIR="" KITTY_WINDOW_ID="" WT_SESSION="" detect_terminal)
+  if [[ "$result" == "unknown" ]]; then
+    test_pass "Unknown terminal when no env vars set"
+  else
+    test_fail "Unknown terminal detection failed (got: $result)"
+  fi
+}
+
+# ==============================================================================
+# REJECTION LOGIC TESTS
+# ==============================================================================
+
+test_rejection_logic() {
+  test_start "Rejection state logic"
+
+  # Create a temporary test history file
+  local test_dir="$FONT_APP_DIR/.test-data-$$"
+  local test_history="$test_dir/history.jsonl"
+  mkdir -p "$test_dir"
+
+  # Save original and override for this test
+  local orig_history="${FONT_HISTORY_FILE:-}"
+  local orig_state_dir="${FONT_STATE_DIR:-}"
+  FONT_HISTORY_FILE="$test_history"
+  FONT_STATE_DIR="$test_dir"
+
+  # Start with empty history
+  > "$test_history"
+
+  local test_font="TestFont-$$"
+
+  # Test 1: Font should not be rejected initially
+  if ! is_font_rejected "$test_font"; then
+    test_pass "Font not rejected initially"
+  else
+    test_fail "Font incorrectly marked as rejected initially"
+  fi
+
+  # Test 2: Reject the font
+  reject_font "$test_font" "Test rejection reason"
+  if is_font_rejected "$test_font"; then
+    test_pass "Font rejected after reject_font()"
+  else
+    test_fail "Font not rejected after reject_font()"
+  fi
+
+  # Test 3: Check rejection info
+  local info
+  info=$(get_rejected_font_info "$test_font")
+  local reason
+  reason=$(echo "$info" | jq -r '.message // .reason // ""')
+  if [[ "$reason" == "Test rejection reason" ]]; then
+    test_pass "Rejection reason stored correctly"
+  else
+    test_fail "Rejection reason not stored (got: $reason)"
+  fi
+
+  # Test 4: Unreject the font
+  unreject_font "$test_font"
+  if ! is_font_rejected "$test_font"; then
+    test_pass "Font not rejected after unreject_font()"
+  else
+    test_fail "Font still rejected after unreject_font()"
+  fi
+
+  # Test 5: Reject again to verify state toggle works
+  reject_font "$test_font" "Second rejection"
+  if is_font_rejected "$test_font"; then
+    test_pass "Font rejected again after second reject_font()"
+  else
+    test_fail "Font not rejected after second reject_font()"
+  fi
+
+  # Cleanup
+  rm -rf "$test_dir"
+  FONT_HISTORY_FILE="$orig_history"
+  FONT_STATE_DIR="$orig_state_dir"
+}
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 
@@ -359,6 +475,8 @@ main() {
   test_validate_previews
   test_cache_functionality
   test_display_preview
+  test_terminal_detection
+  test_rejection_logic
 
   # Summary
   echo ""
