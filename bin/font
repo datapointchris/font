@@ -23,6 +23,7 @@ fi
 source "$FONT_APP_DIR/lib/lib.sh"
 source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
+source "$FONT_APP_DIR/lib/sync.sh"
 
 # Rename original list_fonts and create filtered version
 eval "$(declare -f list_fonts | sed '1s/list_fonts/list_fonts_unfiltered/')"
@@ -58,6 +59,12 @@ usage() {
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
+  sync init            Set up cross-machine sync via GitHub Gist
+  sync status          Show sync status
+  sync push            Force push to gist
+  sync pull            Force pull from gist
+  sync off             Disable auto-sync
+  sync on              Re-enable auto-sync
   upgrade              Update font to latest version (git pull)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
@@ -119,6 +126,12 @@ Commands
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
+  sync init            Set up cross-machine sync via GitHub Gist
+  sync status          Show sync status
+  sync push            Force push to gist
+  sync pull            Force pull from gist
+  sync off             Disable auto-sync
+  sync on              Re-enable auto-sync
   upgrade              Update font to latest version (git pull)
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
@@ -190,6 +203,7 @@ apply_font_cmd() {
   local applied
   if applied=$(terminal_apply_font "$font"); then
     log_action "apply" "$font"
+    sync_after_action
     echo ""
     echo "Applied to: $applied"
     echo ""
@@ -233,6 +247,7 @@ mark_liked() {
   fi
 
   log_action "like" "$font" "$message"
+  sync_after_action
   echo "✓ Liked: $font"
   [[ -n "$message" ]] && echo "  Reason: $message"
 }
@@ -248,6 +263,7 @@ mark_disliked() {
   fi
 
   log_action "dislike" "$font" "$message"
+  sync_after_action
   echo "✓ Disliked: $font"
   [[ -n "$message" ]] && echo "  Reason: $message"
 }
@@ -269,6 +285,7 @@ add_note() {
   fi
 
   log_action "note" "$font" "$message"
+  sync_after_action
   echo "✓ Added note to: $font"
   echo "  Note: $message"
 }
@@ -290,7 +307,7 @@ mark_rejected() {
   fi
 
   reject_font "$font" "$reason"
-  log_action "reject" "$font" "$reason"
+  sync_after_action
   echo "✓ Marked as rejected: $font"
   echo "  Reason: $reason"
   echo ""
@@ -452,7 +469,7 @@ PREVIEW_EOF
 
   if [[ -n "$selected" ]]; then
     unreject_font "$selected"
-    log_action "unreject" "$selected"
+    sync_after_action
     echo "Unrejected: $selected"
     echo ""
     echo "This font is now available in the font list again."
@@ -570,6 +587,9 @@ change_font() {
     echo "Error: ImageMagick not found. Install with: brew install imagemagick"
     exit 1
   fi
+
+  # Pull latest history before showing picker
+  sync_before_read
 
   # Check for image display tool
   if ! command -v chafa &>/dev/null && ! command -v viu &>/dev/null; then
@@ -754,6 +774,44 @@ main() {
       ;;
     unreject)
       unreject_font_interactive
+      ;;
+    sync)
+      case "${2:-}" in
+        init)
+          sync_init
+          ;;
+        status)
+          sync_status
+          ;;
+        push)
+          echo "Pushing to gist..."
+          if sync_push; then
+            echo "✓ Pushed successfully"
+          else
+            echo "✗ Push failed" >&2
+            exit 1
+          fi
+          ;;
+        pull)
+          echo "Pulling from gist..."
+          if sync_pull; then
+            echo "✓ Pulled successfully"
+          else
+            echo "✗ Pull failed" >&2
+            exit 1
+          fi
+          ;;
+        off)
+          sync_off
+          ;;
+        on)
+          sync_on
+          ;;
+        *)
+          echo "Usage: font sync <init|status|push|pull|on|off>"
+          exit 1
+          ;;
+      esac
       ;;
     generate-previews)
       generate_all_previews
