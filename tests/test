@@ -133,18 +133,32 @@ test_get_font_file_path() {
   fi
 }
 
-test_generate_previews_all() {
-  test_start "Generate preview for EVERY font"
+test_generate_previews() {
+  local full_test="${FULL_TEST:-false}"
 
-  # Clear cache first
-  clear_preview_cache >/dev/null
+  if [[ "$full_test" == "true" ]]; then
+    test_start "Generate preview for EVERY font (full mode)"
+  else
+    test_start "Generate preview for sample fonts (use --full for all)"
+  fi
 
   local fonts_total=0
   local fonts_success=0
   local fonts_failed=0
   declare -a failed_fonts=()
+  declare -a test_fonts=()
 
-  while IFS= read -r font; do
+  if [[ "$full_test" == "true" ]]; then
+    while IFS= read -r font; do
+      test_fonts+=("$font")
+    done < <(list_fonts)
+  else
+    while IFS= read -r font; do
+      test_fonts+=("$font")
+    done < <(list_fonts | head -3)
+  fi
+
+  for font in "${test_fonts[@]}"; do
     fonts_total=$((fonts_total + 1))
 
     test_info "Generating preview for: $font"
@@ -160,7 +174,7 @@ test_generate_previews_all() {
       failed_fonts+=("$font")
       test_fail "Preview generation failed: $font"
     fi
-  done < <(list_fonts)
+  done
 
   test_info "Summary: $fonts_total total, $fonts_success success, $fonts_failed failed"
 
@@ -175,12 +189,25 @@ test_generate_previews_all() {
   fi
 }
 
-test_validate_all_previews() {
-  test_start "Validate ALL generated preview images"
+test_validate_previews() {
+  local full_test="${FULL_TEST:-false}"
+
+  if [[ "$full_test" == "true" ]]; then
+    test_start "Validate ALL generated preview images"
+  else
+    test_start "Validate sample preview images"
+  fi
 
   local images_total=0
   local images_valid=0
   local images_invalid=0
+
+  local font_list
+  if [[ "$full_test" == "true" ]]; then
+    font_list=$(list_fonts)
+  else
+    font_list=$(list_fonts | head -3)
+  fi
 
   while IFS= read -r font; do
     images_total=$((images_total + 1))
@@ -198,7 +225,7 @@ test_validate_all_previews() {
       images_invalid=$((images_invalid + 1))
       test_fail "Invalid image: $font"
     fi
-  done < <(list_fonts)
+  done <<< "$font_list"
 
   test_info "Summary: $images_total checked, $images_valid valid, $images_invalid invalid"
 
@@ -235,9 +262,9 @@ test_cache_functionality() {
     return 1
   fi
 
-  # Get modification time
+  # Get modification time (try GNU stat first, then BSD)
   local mtime1
-  mtime1=$(stat -f %m "$preview_file" 2>/dev/null || stat -c %Y "$preview_file" 2>/dev/null)
+  mtime1=$(stat -c %Y "$preview_file" 2>/dev/null || stat -f %m "$preview_file" 2>/dev/null)
 
   # Wait a second
   sleep 1
@@ -253,7 +280,7 @@ test_cache_functionality() {
 
   # Check modification time didn't change
   local mtime2
-  mtime2=$(stat -f %m "$preview_file2" 2>/dev/null || stat -c %Y "$preview_file2" 2>/dev/null)
+  mtime2=$(stat -c %Y "$preview_file2" 2>/dev/null || stat -f %m "$preview_file2" 2>/dev/null)
 
   if [[ "$mtime1" == "$mtime2" ]]; then
     test_pass "Cache was used (file not regenerated)"
@@ -302,11 +329,25 @@ test_display_preview() {
 # ==============================================================================
 
 main() {
+  # Parse arguments
+  FULL_TEST=false
+  for arg in "$@"; do
+    case "$arg" in
+      --full) FULL_TEST=true ;;
+    esac
+  done
+  export FULL_TEST
+
   echo "╔════════════════════════════════════════════════════════════════════════╗"
   echo "║                    FONT-SYNC TEST SUITE                                ║"
   echo "╚════════════════════════════════════════════════════════════════════════╝"
 
-  test_info "Starting comprehensive test suite..."
+  test_info "Starting test suite..."
+  if [[ "$FULL_TEST" == "true" ]]; then
+    test_info "Mode: FULL (testing all fonts)"
+  else
+    test_info "Mode: Quick (testing sample fonts, use --full for all)"
+  fi
   test_info "Preview text file: $PREVIEW_TEXT_FILE"
   test_info "Cache directory: $PREVIEW_CACHE_DIR"
 
@@ -314,8 +355,8 @@ main() {
   test_preview_text_file
   test_list_fonts
   test_get_font_file_path
-  test_generate_previews_all
-  test_validate_all_previews
+  test_generate_previews
+  test_validate_previews
   test_cache_functionality
   test_display_preview
 
