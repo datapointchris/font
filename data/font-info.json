@@ -1,0 +1,298 @@
+{
+  "3270 Nerd Font": {
+    "description": "Recreation of IBM 3270 terminal font with Nerd Font glyphs",
+    "known_for": "Nostalgic mainframe aesthetic with modern icons",
+    "creator": "Ricardo Bánffy (3270 font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2011 (font)",
+    "license": "BSD-3-Clause + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Andale Mono": {
+    "description": "Monospaced font designed for screen legibility",
+    "known_for": "Clean, narrow design with excellent screen rendering",
+    "creator": "Steve Matteson (Monotype)",
+    "year": "1995",
+    "license": "Proprietary (bundled with macOS)",
+    "url": "https://en.wikipedia.org/wiki/Andale_Mono"
+  },
+  "CaskaydiaCove Nerd Font": {
+    "description": "Cascadia Code with Nerd Font patches",
+    "known_for": "Microsoft terminal font with icon glyphs and cursive italics",
+    "creator": "Microsoft (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2019 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Comic Mono": {
+    "description": "Monospaced version of Comic Sans for a playful coding experience",
+    "known_for": "Fun, casual aesthetic while maintaining readability",
+    "creator": "Shannon Miwa",
+    "year": "2018",
+    "license": "MIT",
+    "url": "https://dtinth.github.io/comic-mono-font/"
+  },
+  "ComicShannsMono Nerd Font": {
+    "description": "Comic-style monospaced font with Nerd Font glyphs (SeriousShanns)",
+    "known_for": "Playful coding with terminal icon support",
+    "creator": "Shannon Miwa (based on Comic Sans)",
+    "year": "2018",
+    "license": "MIT + SIL",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "CommitMono": {
+    "description": "Neutral programming typeface with ligatures",
+    "known_for": "Balanced, professional, anonymous aesthetic",
+    "creator": "Eigen Type",
+    "year": "2023",
+    "license": "SIL Open Font License",
+    "url": "https://commitmono.com/"
+  },
+  "CommitMonoV143": {
+    "description": "CommitMono version 1.43 (legacy version)",
+    "known_for": "Specific version of neutral programming typeface",
+    "creator": "Eigen Type",
+    "year": "2023",
+    "license": "SIL Open Font License",
+    "url": "https://commitmono.com/"
+  },
+  "DroidSansM Nerd Font": {
+    "description": "Droid Sans Mono with Nerd Font patches",
+    "known_for": "Mobile-optimized font with dev icons",
+    "creator": "Steve Matteson (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2007 (font)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Fira Code": {
+    "description": "Free monospaced font with programming ligatures",
+    "known_for": "Extensive ligature support for operators (=>, <=, !=, etc.)",
+    "creator": "Nikita Prokopov",
+    "year": "2014",
+    "license": "SIL Open Font License",
+    "url": "https://github.com/tonsky/FiraCode"
+  },
+  "Fira Code iScript": {
+    "description": "Fira Code combined with Script12 cursive font",
+    "known_for": "Programming ligatures with cursive italic style",
+    "creator": "Ken Crocken (based on Fira Code)",
+    "year": "2018",
+    "license": "SIL Open Font License",
+    "url": "https://github.com/kencrocken/FiraCodeiScript"
+  },
+  "Hack Nerd Font": {
+    "description": "Hack typeface with Nerd Font icon glyphs",
+    "known_for": "Clear character distinction with 3,600+ dev icons",
+    "creator": "Chris Simpkins (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2015 (font)",
+    "license": "MIT + Bitstream Vera License + Nerd Fonts",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Intel One Mono": {
+    "description": "Intel's open-source monospaced font",
+    "known_for": "Clarity at small sizes, optimized for code",
+    "creator": "Intel Corporation",
+    "year": "2022",
+    "license": "SIL Open Font License",
+    "url": "https://github.com/intel/intel-one-mono"
+  },
+  "Iosevka": {
+    "description": "Slender monospace sans-serif and slab-serif typeface",
+    "known_for": "Highly customizable, space-efficient, ~100 variants",
+    "creator": "Belleve Invis",
+    "year": "2015",
+    "license": "SIL Open Font License",
+    "url": "https://typeof.net/Iosevka/"
+  },
+  "Iosevka Fixed": {
+    "description": "Iosevka variant with fixed spacing optimizations",
+    "known_for": "Space-efficient with strict monospace metrics",
+    "creator": "Belleve Invis",
+    "year": "2015",
+    "license": "SIL Open Font License",
+    "url": "https://typeof.net/Iosevka/"
+  },
+  "Iosevka Nerd Font": {
+    "description": "Iosevka with Nerd Font icon glyphs",
+    "known_for": "Space-efficient with dev tool icons",
+    "creator": "Belleve Invis (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2015 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Iosevka Slab": {
+    "description": "Iosevka with slab serifs for improved readability",
+    "known_for": "Space-efficient with serif accents",
+    "creator": "Belleve Invis",
+    "year": "2015",
+    "license": "SIL Open Font License",
+    "url": "https://typeof.net/Iosevka/"
+  },
+  "Iosevka Term": {
+    "description": "Iosevka variant optimized for terminal use",
+    "known_for": "Space-efficient with terminal-specific metrics",
+    "creator": "Belleve Invis",
+    "year": "2015",
+    "license": "SIL Open Font License",
+    "url": "https://typeof.net/Iosevka/"
+  },
+  "JetBrainsMono Nerd Font": {
+    "description": "JetBrains Mono with Nerd Font glyphs for terminal icons",
+    "known_for": "140+ ligatures with dev tool icon support",
+    "creator": "JetBrains (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2020 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "JetBrainsMonoNL Nerd Font": {
+    "description": "JetBrains Mono No Ligatures variant with Nerd Font glyphs",
+    "known_for": "Clean monospace without ligatures, includes dev icons",
+    "creator": "JetBrains (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2020 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGL Nerd Font": {
+    "description": "Meslo Large (LG) variant with Nerd Font patches",
+    "known_for": "Customized Menlo with adjusted line spacing and dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGLDZ Nerd Font": {
+    "description": "Meslo Large with dotted zero and Nerd Font patches",
+    "known_for": "Clear zero distinction with dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGM Nerd Font": {
+    "description": "Meslo Large Medium variant with Nerd Font patches",
+    "known_for": "Medium line spacing with dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGMDZ Nerd Font": {
+    "description": "Meslo Large Medium with dotted zero and Nerd Font patches",
+    "known_for": "Medium spacing with clear zero distinction and dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGS Nerd Font": {
+    "description": "Meslo Large Small variant with Nerd Font patches",
+    "known_for": "Compact line spacing with dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MesloLGSDZ Nerd Font": {
+    "description": "Meslo Large Small with dotted zero and Nerd Font patches",
+    "known_for": "Compact spacing with clear zero distinction and dev icons",
+    "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (Meslo)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MonaspiceAr Nerd Font": {
+    "description": "Monaspace Argon with Nerd Font patches",
+    "known_for": "Geometric style from Monaspace family with dev icons",
+    "creator": "GitHub (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2023",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MonaspiceKr Nerd Font": {
+    "description": "Monaspace Krypton with Nerd Font patches",
+    "known_for": "Mechanical style from Monaspace family with dev icons",
+    "creator": "GitHub (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2023",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MonaspiceNe Nerd Font": {
+    "description": "Monaspace Neon with Nerd Font patches",
+    "known_for": "Neo-grotesque style from Monaspace family with dev icons",
+    "creator": "GitHub (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2023",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MonaspiceRn Nerd Font": {
+    "description": "Monaspace Radon with Nerd Font patches",
+    "known_for": "Handwriting style from Monaspace family with dev icons",
+    "creator": "GitHub (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2023",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "MonaspiceXe Nerd Font": {
+    "description": "Monaspace Xenon with Nerd Font patches",
+    "known_for": "Sans serif style from Monaspace family with dev icons",
+    "creator": "GitHub (font), Ryan McIntyre (Nerd Fonts)",
+    "year": "2023",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Nimbus Mono": {
+    "description": "URW++ monospaced font, Courier alternative",
+    "known_for": "Professional Courier replacement with PostScript heritage",
+    "creator": "URW++",
+    "year": "1999",
+    "license": "GPL + Font Exception",
+    "url": "https://www.fontsquirrel.com/fonts/nimbus-mono"
+  },
+  "PT Mono": {
+    "description": "Monospaced font from the PT Sans family",
+    "known_for": "Humanist proportions, excellent Cyrillic support",
+    "creator": "Alexandra Korolkova (ParaType)",
+    "year": "2011",
+    "license": "SIL Open Font License",
+    "url": "https://fonts.google.com/specimen/PT+Mono"
+  },
+  "RobotoMono Nerd Font": {
+    "description": "Roboto Mono with Nerd Font icon glyphs",
+    "known_for": "Google's geometric monospace with dev tool icons",
+    "creator": "Christian Robertson (Google), Ryan McIntyre (Nerd Fonts)",
+    "year": "2015 (font)",
+    "license": "Apache License 2.0 + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "SauceCodePro Nerd Font": {
+    "description": "Source Code Pro with Nerd Font patches (open-source variant)",
+    "known_for": "Adobe's coding font with dev tool icon glyphs",
+    "creator": "Paul D. Hunt (Adobe), Ryan McIntyre (Nerd Fonts)",
+    "year": "2012 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "SpaceMono Nerd Font": {
+    "description": "Space Mono with Nerd Font icon glyphs",
+    "known_for": "Geometric monospace designed for editorial use with dev icons",
+    "creator": "Colophon Foundry, Ryan McIntyre (Nerd Fonts)",
+    "year": "2016 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Terminess Nerd Font": {
+    "description": "Terminus font with Nerd Font patches",
+    "known_for": "Bitmap-style terminal font with dev icons",
+    "creator": "Dimitar Zhekov (Terminus), Ryan McIntyre (Nerd Fonts)",
+    "year": "2004 (font)",
+    "license": "SIL Open Font License + MIT",
+    "url": "https://www.nerdfonts.com/"
+  },
+  "Victor Mono": {
+    "description": "Programming font with semi-connected cursive italics",
+    "known_for": "Unique italic style, coding ligatures, playful character",
+    "creator": "Rune Bjørnerås",
+    "year": "2019",
+    "license": "SIL Open Font License",
+    "url": "https://rubjo.github.io/victor-mono/"
+  }
+}

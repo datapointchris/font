@@ -9,7 +9,7 @@ FONT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 FONT_APP_DIR="$(cd "$FONT_LIB_DIR/.." && pwd)"
 PREVIEW_TEXT_FILE="$FONT_APP_DIR/data/preview-text.txt"
 CODE_FONTS_DIR="${CODE_FONTS_DIR:-$HOME/Documents/code_fonts}"
-PREVIEW_CACHE_DIR="${PREVIEW_CACHE_DIR:-/tmp/font-preview}"
+PREVIEW_CACHE_DIR="${PREVIEW_CACHE_DIR:-$HOME/.cache/font/previews}"
 
 # ==============================================================================
 # CORE FUNCTIONS - Each can be tested independently
@@ -360,7 +360,7 @@ count_fonts() {
 # Returns: JSON object with font info
 get_font_info() {
   local font="$1"
-  local info_file="$HOME/.config/font/font-info.json"
+  local info_file="$FONT_APP_DIR/data/font-info.json"
 
   if [[ -f "$info_file" ]] && command -v jq &>/dev/null; then
     jq -r --arg font "$font" '.[$font] // {}' "$info_file"
