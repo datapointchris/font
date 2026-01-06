@@ -820,12 +820,26 @@ main() {
       clear_preview_cache
       ;;
     upgrade|update)
-      echo "Upgrading font..."
-      if git -C "$FONT_APP_DIR" pull --quiet; then
-        echo "✓ font upgraded successfully"
-      else
+      local before_commit after_commit
+      before_commit=$(git -C "$FONT_APP_DIR" rev-parse HEAD)
+
+      if ! git -C "$FONT_APP_DIR" pull --quiet; then
         echo "✗ font upgrade failed" >&2
         exit 1
+      fi
+
+      after_commit=$(git -C "$FONT_APP_DIR" rev-parse HEAD)
+
+      if [[ "$before_commit" == "$after_commit" ]]; then
+        echo "✓ font is already up to date"
+      else
+        local before_desc after_desc
+        before_desc=$(git -C "$FONT_APP_DIR" describe --tags --always "$before_commit" 2>/dev/null || echo "${before_commit:0:7}")
+        after_desc=$(git -C "$FONT_APP_DIR" describe --tags --always "$after_commit" 2>/dev/null || echo "${after_commit:0:7}")
+        echo "✓ font upgraded from $before_desc to $after_desc"
+        echo ""
+        echo "Changes:"
+        git -C "$FONT_APP_DIR" log --format="  • %s" "${before_commit}..${after_commit}"
       fi
       ;;
     download|install)
