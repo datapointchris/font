@@ -261,6 +261,16 @@ list_tracked_fonts() {
   get_history | jq -r 'group_by(.font) | .[].font' | sort -u
 }
 
+get_all_apply_counts() {
+  get_history | jq -r '
+    map(select(.action == "apply")) |
+    group_by(.font) |
+    map({font: .[0].font, count: length}) |
+    .[] |
+    "\(.font)\t\(.count)"
+  '
+}
+
 validate_history_file() {
   if [[ ! -f "$FONT_HISTORY_FILE" ]]; then
     return 0

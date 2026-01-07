@@ -677,9 +677,35 @@ random_font() {
     exit 1
   fi
 
-  local selected_font="${all_fonts[$RANDOM % ${#all_fonts[@]}]}"
+  # Get apply counts for all fonts
+  declare -A apply_counts
+  while IFS=$'\t' read -r font count; do
+    apply_counts["$font"]=$count
+  done < <(get_all_apply_counts)
+
+  # Find minimum apply count among available fonts
+  local min_count=999999
+  for font in "${all_fonts[@]}"; do
+    local count="${apply_counts[$font]:-0}"
+    if [[ $count -lt $min_count ]]; then
+      min_count=$count
+    fi
+  done
+
+  # Get all fonts with minimum apply count
+  local least_used=()
+  for font in "${all_fonts[@]}"; do
+    local count="${apply_counts[$font]:-0}"
+    if [[ $count -eq $min_count ]]; then
+      least_used+=("$font")
+    fi
+  done
+
+  # Pick randomly from least-used fonts
+  local selected_font="${least_used[$RANDOM % ${#least_used[@]}]}"
 
   echo "🎲 Randomly selected: $selected_font"
+  echo "   (${#least_used[@]} fonts with $min_count applies)"
   echo ""
   apply_font_cmd "$selected_font"
 }
