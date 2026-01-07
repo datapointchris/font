@@ -27,8 +27,9 @@ _sync_check_gh() {
   return 0
 }
 
-# Check if sync is enabled
+# Check if sync is enabled (disabled in dev mode)
 is_sync_enabled() {
+  [[ "${FONT_ENV:-}" == "development" ]] && return 1
   [[ -f "$FONT_SYNC_STATE_FILE" ]] && \
     jq -e '.enabled == true' "$FONT_SYNC_STATE_FILE" &>/dev/null
 }
@@ -112,6 +113,11 @@ _sync_merge_histories() {
 
 # Initialize sync - set up gist and do initial sync
 sync_init() {
+  if [[ "${FONT_ENV:-}" == "development" ]]; then
+    echo "✗ Sync is disabled in dev mode" >&2
+    return 1
+  fi
+
   echo "Initializing font sync..."
 
   if ! _sync_check_gh; then
@@ -241,6 +247,14 @@ sync_status() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
+  if [[ "${FONT_ENV:-}" == "development" ]]; then
+    echo "Status: Disabled (dev mode)"
+    echo ""
+    echo "Sync is disabled in development mode to prevent"
+    echo "test data from polluting production history."
+    return
+  fi
+
   if [[ ! -f "$FONT_SYNC_STATE_FILE" ]]; then
     echo "Status: Not initialized"
     echo ""
@@ -320,6 +334,7 @@ sync_on() {
 # Call this after log_action to push changes
 sync_after_action() {
   if is_sync_enabled; then
+    echo "✓ Synced via GitHub Gist"
     sync_push &>/dev/null &
     disown 2>/dev/null || true
   fi
@@ -330,5 +345,6 @@ sync_after_action() {
 sync_before_read() {
   if is_sync_enabled; then
     sync_pull &>/dev/null || true
+    echo "✓ Synced via GitHub Gist"
   fi
 }
