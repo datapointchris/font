@@ -29,7 +29,7 @@ _sync_check_gh() {
 
 # Check if sync is enabled (disabled in dev mode)
 is_sync_enabled() {
-  [[ "${FONT_ENV:-}" == "development" ]] && return 1
+  _is_dev_mode && return 1
   [[ -f "$FONT_SYNC_STATE_FILE" ]] && \
     jq -e '.enabled == true' "$FONT_SYNC_STATE_FILE" &>/dev/null
 }
@@ -113,7 +113,7 @@ _sync_merge_histories() {
 
 # Initialize sync - set up gist and do initial sync
 sync_init() {
-  if [[ "${FONT_ENV:-}" == "development" ]]; then
+  if _is_dev_mode; then
     echo "✗ Sync is disabled in dev mode" >&2
     return 1
   fi
@@ -247,7 +247,7 @@ sync_status() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
-  if [[ "${FONT_ENV:-}" == "development" ]]; then
+  if _is_dev_mode; then
     echo "Status: Disabled (dev mode)"
     echo ""
     echo "Sync is disabled in development mode to prevent"

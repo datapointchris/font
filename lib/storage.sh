@@ -6,8 +6,12 @@ set -euo pipefail
 
 _STORAGE_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Dev mode: use FONT_ENV=development (set via direnv in ~/tools/font/.envrc)
-if [[ "${FONT_ENV:-}" == "development" ]]; then
+# Dev mode: detect by script location (~/tools/font = dev, ~/.local/share/font = prod)
+_is_dev_mode() {
+  [[ "$_STORAGE_APP_DIR" == "$HOME/tools/font" ]]
+}
+
+if _is_dev_mode; then
   FONT_STATE_DIR="$_STORAGE_APP_DIR/.dev-data"
 else
   FONT_STATE_DIR="$HOME/.local/state/font"
