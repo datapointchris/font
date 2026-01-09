@@ -1,0 +1,14 @@
+# Changelog
+
+## [1.1.0](https://github.com/datapointchris/font/compare/v1.0.0...v1.1.0) (2026-01-09)
+
+
+### Features
+
+* upgrade only pulls tagged releases, not unreleased code ([0ca0092](https://github.com/datapointchris/font/commit/0ca009237da3d87a6188a58fa3cdf2ea8c4f2f6b))
+
+
+### Bug Fixes
+
+* resolve shellcheck warnings ([0c302bd](https://github.com/datapointchris/font/commit/0c302bd35f4c2b4c70415117c24df8b733e5a54b))
+* use correct release-please action ([9bb847a](https://github.com/datapointchris/font/commit/9bb847a30dc571dc11236f22141582f52170aa23))
