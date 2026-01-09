@@ -25,6 +25,11 @@ source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
 source "$FONT_APP_DIR/lib/sync.sh"
 
+# Get version from git tags (no VERSION file needed)
+get_version() {
+  git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null || echo "dev"
+}
+
 # Rename original list_fonts and create filtered version
 eval "$(declare -f list_fonts | sed '1s/list_fonts/list_fonts_unfiltered/')"
 
@@ -751,6 +756,10 @@ generate_all_previews() {
 
 main() {
   case "${1:-}" in
+    --version|-v)
+      echo "font $(get_version)"
+      exit 0
+      ;;
     list)
       list_fonts
       ;;
