@@ -562,4 +562,3 @@ apply_font_dunst() {
   fi
   return 1
 }
-
