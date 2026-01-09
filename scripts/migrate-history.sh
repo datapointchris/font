@@ -109,7 +109,7 @@ success "History sorted"
 if [[ -d "$OLD_PREVIEW_CACHE" ]] && [[ -n "$(ls -A "$OLD_PREVIEW_CACHE" 2>/dev/null)" ]]; then
   info "Moving preview cache..."
   mv "$OLD_PREVIEW_CACHE"/* "$NEW_CACHE_DIR/" 2>/dev/null || true
-  PREVIEW_COUNT=$(ls -1 "$NEW_CACHE_DIR" 2>/dev/null | wc -l | xargs)
+  PREVIEW_COUNT=$(find "$NEW_CACHE_DIR" -maxdepth 1 -type f 2>/dev/null | wc -l | xargs)
   success "Moved $PREVIEW_COUNT preview images to $NEW_CACHE_DIR"
 else
   info "No preview cache to migrate"

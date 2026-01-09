@@ -388,7 +388,7 @@ test_rejection_logic() {
   FONT_STATE_DIR="$test_dir"
 
   # Start with empty history
-  > "$test_history"
+  : > "$test_history"
 
   local test_font="TestFont-$$"
 
