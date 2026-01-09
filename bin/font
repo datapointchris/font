@@ -70,7 +70,7 @@ usage() {
   sync pull            Force pull from gist
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
-  upgrade              Update font to latest version (git pull)
+  upgrade              Update font to latest release
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 EOF
@@ -137,7 +137,7 @@ Commands
   sync pull            Force pull from gist
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
-  upgrade              Update font to latest version (git pull)
+  upgrade              Update font to latest release
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
 
@@ -855,26 +855,44 @@ main() {
       clear_preview_cache
       ;;
     upgrade|update)
-      local before_commit after_commit
-      before_commit=$(git -C "$FONT_APP_DIR" rev-parse HEAD)
+      local before_version latest_tag
 
-      if ! git -C "$FONT_APP_DIR" pull --quiet; then
-        echo "✗ font upgrade failed" >&2
+      # Get current version
+      before_version=$(git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null)
+
+      # Fetch latest tags from remote
+      if ! git -C "$FONT_APP_DIR" fetch --tags --quiet 2>/dev/null; then
+        echo "✗ font upgrade failed: could not fetch from remote" >&2
         exit 1
       fi
 
-      after_commit=$(git -C "$FONT_APP_DIR" rev-parse HEAD)
+      # Get latest tag (sorted by version)
+      latest_tag=$(git -C "$FONT_APP_DIR" tag -l 'v*' --sort=-v:refname | head -n1)
 
-      if [[ "$before_commit" == "$after_commit" ]]; then
-        echo "✓ font is already up to date"
-      else
-        local before_desc after_desc
-        before_desc=$(git -C "$FONT_APP_DIR" describe --tags --always "$before_commit" 2>/dev/null || echo "${before_commit:0:7}")
-        after_desc=$(git -C "$FONT_APP_DIR" describe --tags --always "$after_commit" 2>/dev/null || echo "${after_commit:0:7}")
-        echo "✓ font upgraded from $before_desc to $after_desc"
+      if [[ -z "$latest_tag" ]]; then
+        echo "✗ font upgrade failed: no releases found" >&2
+        exit 1
+      fi
+
+      # Check if already on latest tag
+      if [[ "$before_version" == "$latest_tag" ]]; then
+        echo "✓ font already at latest: $latest_tag"
+        exit 0
+      fi
+
+      # Checkout the latest tag
+      if ! git -C "$FONT_APP_DIR" checkout --quiet "$latest_tag" 2>/dev/null; then
+        echo "✗ font upgrade failed: could not checkout $latest_tag" >&2
+        exit 1
+      fi
+
+      echo "✓ font upgraded: $before_version → $latest_tag"
+
+      # Show changes between versions
+      if [[ "$before_version" =~ ^v[0-9] ]]; then
         echo ""
         echo "Changes:"
-        git -C "$FONT_APP_DIR" log --format="  • %s" "${before_commit}..${after_commit}"
+        git -C "$FONT_APP_DIR" log --format="  • %s" "${before_version}..${latest_tag}" 2>/dev/null || true
       fi
       ;;
     download|install)
