@@ -171,16 +171,25 @@ get_rankings() {
 
   get_history | jq -c --argjson usage "$usage_times" '
     group_by(.font) |
-    map({
-      font: .[0].font,
-      likes: map(select(.action == "like")) | length,
-      dislikes: map(select(.action == "dislike")) | length,
-      score: (map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length),
-      last_used: (map(select(.action == "apply")) | max_by(.ts) | .ts // "never"),
-      platforms: [.[].platform] | unique | join(","),
-      usage_seconds: ($usage[.[0].font] // 0),
-      sort_key: (if (map(select(.action == "apply")) | length) > 0 then (map(select(.action == "apply")) | max_by(.ts) | .ts) else "0" end)
-    }) |
+    map(
+      . as $actions |
+      ($actions | map(select(.action == "reject" or .action == "unreject")) | sort_by(.ts) | last | .action // "none") as $reject_status |
+      if $reject_status == "reject" then
+        null
+      else
+        {
+          font: .[0].font,
+          likes: map(select(.action == "like")) | length,
+          dislikes: map(select(.action == "dislike")) | length,
+          score: (map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length),
+          last_used: (map(select(.action == "apply")) | max_by(.ts) | .ts // "never"),
+          platforms: [.[].platform] | unique | join(","),
+          usage_seconds: ($usage[.[0].font] // 0),
+          sort_key: (if (map(select(.action == "apply")) | length) > 0 then (map(select(.action == "apply")) | max_by(.ts) | .ts) else "0" end)
+        }
+      end
+    ) |
+    map(select(. != null)) |
     sort_by(.score, .sort_key) | reverse |
     .[]
   '
