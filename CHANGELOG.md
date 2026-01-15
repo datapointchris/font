@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/datapointchris/font/compare/v1.1.0...v1.1.1) (2026-01-15)
+
+
+### Bug Fixes
+
+* exclude rejected fonts from rankings ([1e1cdfe](https://github.com/datapointchris/font/commit/1e1cdfe6cbfe58def07be9ea98b33f3823dc4263))
+
 ## [1.1.0](https://github.com/datapointchris/font/compare/v1.0.0...v1.1.0) (2026-01-09)
 
 
