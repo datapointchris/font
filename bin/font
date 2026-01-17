@@ -493,41 +493,41 @@ show_rankings() {
   fi
 
   echo ""
-  echo "Font Rankings (by score and recent usage)"
+  echo "Font Rankings"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
+
+  # Find max font name length for alignment
+  local max_len=0
+  while IFS= read -r line; do
+    local font=$(echo "$line" | jq -r '.font')
+    local len=${#font}
+    [[ $len -gt $max_len ]] && max_len=$len
+  done <<< "$rankings"
+
+  # Cap max length at 35 to prevent overly wide output
+  [[ $max_len -gt 35 ]] && max_len=35
 
   local rank=0
   while IFS= read -r line; do
     rank=$((rank + 1))
     local font=$(echo "$line" | jq -r '.font')
     local score=$(echo "$line" | jq -r '.score')
-    local likes=$(echo "$line" | jq -r '.likes')
-    local dislikes=$(echo "$line" | jq -r '.dislikes')
-    local last_used=$(echo "$line" | jq -r '.last_used')
-    local platforms=$(echo "$line" | jq -r '.platforms')
     local usage_seconds=$(echo "$line" | jq -r '.usage_seconds // 0')
 
-    # Format last used
-    if [[ "$last_used" == "never" ]]; then
-      last_used="never used"
-    else
-      last_used=$(date -d "$last_used" "+%b %d, %Y" 2>/dev/null || echo "$last_used")
-    fi
-
     # Format usage time
-    local usage_time="not used"
+    local usage_time="-"
     if [[ "$usage_seconds" -gt 0 ]]; then
       usage_time=$(format_duration "$usage_seconds")
     fi
 
-    printf "%2d. %s\n" "$rank" "$font"
-    printf "    Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
-    printf "    Usage time: %s\n" "$usage_time"
-    printf "    Last used: %s\n" "$last_used"
-    printf "    Platforms: %s\n" "$platforms"
-    echo ""
+    # Truncate long font names
+    if [[ ${#font} -gt 35 ]]; then
+      font="${font:0:32}..."
+    fi
+
+    printf "%2d. %-${max_len}s  %+3d  %s\n" "$rank" "$font" "$score" "$usage_time"
   done <<< "$rankings"
+  echo ""
 }
 
 show_current_font() {
