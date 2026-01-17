@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/datapointchris/font/compare/v1.1.1...v1.2.0) (2026-01-17)
+
+
+### Features
+
+* display notes in font current command ([f6d2726](https://github.com/datapointchris/font/commit/f6d272629e8e1449f1feaa2ea1e33d011c8419e5))
+
 ## [1.1.1](https://github.com/datapointchris/font/compare/v1.1.0...v1.1.1) (2026-01-15)
 
 
