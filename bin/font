@@ -50,6 +50,7 @@ usage() {
     print_section "Commands" "blue"
     cat <<'EOF'
   current              Show currently active font
+  info                 Browse fonts and view detailed history
   change               Interactive font picker with previews
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
   size-up              Increase font size by 1
@@ -117,6 +118,7 @@ EOF
 Commands
 ─────────────────────────
   current              Show currently active font
+  info                 Browse fonts and view detailed history
   change               Interactive font picker with previews
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
   size-up              Increase font size by 1
@@ -540,6 +542,39 @@ show_current_font() {
   display_font_details "$font" "full"
 }
 
+show_font_info() {
+  if ! command -v fzf &>/dev/null; then
+    echo "Error: fzf not found. Install with: brew install fzf"
+    exit 1
+  fi
+
+  sync_before_read
+
+  local preview_script="/tmp/font-info-preview-$$.sh"
+  cat > "$preview_script" <<PREVIEW_EOF
+#!/bin/bash
+source "$FONT_APP_DIR/lib/lib.sh"
+source "$FONT_APP_DIR/lib/storage.sh"
+font="\$1"
+display_font_details "\$font" "full"
+PREVIEW_EOF
+
+  chmod +x "$preview_script"
+
+  local selected
+  selected=$(list_fonts | fzf \
+    --prompt="Select font to view > " \
+    --height=100% \
+    --preview="$preview_script {}" \
+    --preview-window=right:70%)
+
+  rm -f "$preview_script"
+
+  if [[ -n "$selected" ]]; then
+    display_font_details "$selected" "full"
+  fi
+}
+
 show_log() {
   local history
   history=$(get_history_raw)
@@ -765,6 +800,9 @@ main() {
       ;;
     current)
       show_current_font
+      ;;
+    info)
+      show_font_info
       ;;
     change)
       change_font

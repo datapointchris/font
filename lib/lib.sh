@@ -446,16 +446,37 @@ display_font_details() {
           fi
         fi
 
-        # Show notes for this font
-        if type -t get_history &>/dev/null && [[ "$notes" -gt 0 ]]; then
-          echo ""
-          echo "Notes:"
-          get_history | jq -r --arg font "$font" '
-            map(select(.font == $font and .action == "note")) |
-            sort_by(.ts) |
-            .[] |
-            "  [\(.ts[0:10])] \(.message)"
-          ' 2>/dev/null
+        # Show history for this font (tells the story)
+        if type -t get_history &>/dev/null; then
+          local history_count
+          history_count=$(get_history | jq --arg font "$font" '[.[] | select(.font == $font)] | length')
+          if [[ "$history_count" -gt 0 ]]; then
+            echo ""
+            echo "History:"
+            get_history | jq -r --arg font "$font" '
+              map(select(.font == $font)) |
+              sort_by(.ts) |
+              .[] |
+              .action as $act |
+              .ts[0:10] as $date |
+              .message as $msg |
+              if $act == "apply" then
+                "  \($date)  applied"
+              elif $act == "like" then
+                if $msg then "  \($date)  liked: \($msg)" else "  \($date)  liked" end
+              elif $act == "dislike" then
+                if $msg then "  \($date)  disliked: \($msg)" else "  \($date)  disliked" end
+              elif $act == "note" then
+                "  \($date)  note: \($msg)"
+              elif $act == "reject" then
+                "  \($date)  rejected: \($msg)"
+              elif $act == "unreject" then
+                "  \($date)  unrejected"
+              else
+                "  \($date)  \($act)"
+              end
+            ' 2>/dev/null
+          fi
         fi
       else
         # Compact format for preview
