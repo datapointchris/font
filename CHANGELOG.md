@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/datapointchris/font/compare/v1.2.0...v1.3.0) (2026-01-17)
+
+
+### Features
+
+* add info command and enhance history display ([c9f59f6](https://github.com/datapointchris/font/commit/c9f59f6a7aae957c3fd098988a3786851dc13c2e))
+
 ## [1.2.0](https://github.com/datapointchris/font/compare/v1.1.1...v1.2.0) (2026-01-17)
 
 
