@@ -492,16 +492,32 @@ show_rankings() {
     return
   fi
 
+  # Colors
+  local c_reset='\033[0m'
+  local c_gold='\033[0;33m'
+  local c_green='\033[0;32m'
+  local c_red='\033[0;31m'
+  local c_white='\033[0;37m'
+
   echo ""
-  echo "Font Rankings"
+  echo -e "${c_gold}Font Rankings${c_reset}"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  # Find max font name length for alignment
+  # Find max font name length and max usage time for alignment and color scaling
   local max_len=0
+  local max_usage=0
+  local min_usage=999999999
+  local has_usage=false
   while IFS= read -r line; do
     local font=$(echo "$line" | jq -r '.font')
     local len=${#font}
     [[ $len -gt $max_len ]] && max_len=$len
+    local usage=$(echo "$line" | jq -r '.usage_seconds // 0')
+    if [[ "$usage" -gt 0 ]]; then
+      has_usage=true
+      [[ $usage -gt $max_usage ]] && max_usage=$usage
+      [[ $usage -lt $min_usage ]] && min_usage=$usage
+    fi
   done <<< "$rankings"
 
   # Cap max length at 35 to prevent overly wide output
@@ -525,7 +541,43 @@ show_rankings() {
       font="${font:0:32}..."
     fi
 
-    printf "%2d. %-${max_len}s  %+3d  %s\n" "$rank" "$font" "$score" "$usage_time"
+    # Score color
+    local score_color="$c_white"
+    if [[ $score -gt 0 ]]; then
+      score_color="$c_green"
+    elif [[ $score -lt 0 ]]; then
+      score_color="$c_red"
+    fi
+
+    # Usage bar (visual representation of relative usage)
+    local bar=""
+    local bar_width=10
+    if [[ "$usage_seconds" -gt 0 ]] && [[ "$has_usage" == "true" ]] && [[ $max_usage -gt 0 ]]; then
+      local filled=$((usage_seconds * bar_width / max_usage))
+      [[ $filled -lt 1 ]] && filled=1
+      local empty=$((bar_width - filled))
+
+      # Color gradient based on percentage
+      local percent=$((usage_seconds * 100 / max_usage))
+      local bar_color
+      if [[ $percent -ge 50 ]]; then
+        bar_color="$c_green"
+      else
+        bar_color="$c_red"
+      fi
+
+      local filled_part=$(printf '█%.0s' $(seq 1 $filled))
+      local empty_part=""
+      [[ $empty -gt 0 ]] && empty_part=$(printf '░%.0s' $(seq 1 $empty))
+      bar="${bar_color}${filled_part}${c_reset}${empty_part}"
+    elif [[ "$usage_seconds" -gt 0 ]]; then
+      bar="${c_green}$(printf '█%.0s' $(seq 1 $bar_width))${c_reset}"
+    else
+      bar="$(printf '░%.0s' $(seq 1 $bar_width))"
+    fi
+
+    printf "%2d. %-${max_len}s  ${score_color}%+3d${c_reset}    %b  %s\n" \
+      "$rank" "$font" "$score" "$bar" "$usage_time"
   done <<< "$rankings"
   echo ""
 }
