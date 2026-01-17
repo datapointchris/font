@@ -73,7 +73,7 @@ get_history() {
 
 get_history_raw() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -c '.' "$FONT_HISTORY_FILE" | sort
+    jq -s -c 'sort_by(.ts)[]' "$FONT_HISTORY_FILE"
   fi
 }
 
