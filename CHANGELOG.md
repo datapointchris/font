@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/datapointchris/font/compare/v1.3.0...v1.4.0) (2026-01-17)
+
+
+### Features
+
+* add visual enhancements to font rank output ([fdc4d09](https://github.com/datapointchris/font/commit/fdc4d09448e6e1840f3fbb237a58549dea1bb7a8))
+
 ## [1.3.0](https://github.com/datapointchris/font/compare/v1.2.0...v1.3.0) (2026-01-17)
 
 
