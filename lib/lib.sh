@@ -445,6 +445,18 @@ display_font_details() {
             [[ "$in_tmux" != "null" ]] && printf "  In tmux: %s\n" "$in_tmux"
           fi
         fi
+
+        # Show notes for this font
+        if type -t get_history &>/dev/null && [[ "$notes" -gt 0 ]]; then
+          echo ""
+          echo "Notes:"
+          get_history | jq -r --arg font "$font" '
+            map(select(.font == $font and .action == "note")) |
+            sort_by(.ts) |
+            .[] |
+            "  [\(.ts[0:10])] \(.message)"
+          ' 2>/dev/null
+        fi
       else
         # Compact format for preview
         printf "Score: %+d (%d↑ %d↓)" "$score" "$likes" "$dislikes"
