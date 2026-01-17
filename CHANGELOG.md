@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/datapointchris/font/compare/v1.4.0...v1.4.1) (2026-01-17)
+
+
+### Bug Fixes
+
+* sort history entries by timestamp instead of lexicographically ([17ef048](https://github.com/datapointchris/font/commit/17ef048cf01393f94f9bedb3c3c7ace4b818f352))
+
 ## [1.4.0](https://github.com/datapointchris/font/compare/v1.3.0...v1.4.0) (2026-01-17)
 
 
