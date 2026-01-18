@@ -1,7 +1,12 @@
 # Changelog
 
-## [1.4.1](https://github.com/datapointchris/font/compare/v1.4.0...v1.4.1) (2026-01-17)
+## [1.4.2](https://github.com/datapointchris/font/compare/v1.4.1...v1.4.2) (2026-01-17)
 
+### Code Refactoring
+
+* update all terminal configs simultaneously for font changes ([adcbed1](https://github.com/datapointchris/font/commit/adcbed1))
+
+## [1.4.1](https://github.com/datapointchris/font/compare/v1.4.0...v1.4.1) (2026-01-17)
 
 ### Bug Fixes
 
@@ -9,13 +14,11 @@
 
 ## [1.4.0](https://github.com/datapointchris/font/compare/v1.3.0...v1.4.0) (2026-01-17)
 
-
 ### Features
 
 * add visual enhancements to font rank output ([fdc4d09](https://github.com/datapointchris/font/commit/fdc4d09448e6e1840f3fbb237a58549dea1bb7a8))
 
 ## [1.3.0](https://github.com/datapointchris/font/compare/v1.2.0...v1.3.0) (2026-01-17)
-
 
 ### Features
 
@@ -23,13 +26,11 @@
 
 ## [1.2.0](https://github.com/datapointchris/font/compare/v1.1.1...v1.2.0) (2026-01-17)
 
-
 ### Features
 
 * display notes in font current command ([f6d2726](https://github.com/datapointchris/font/commit/f6d272629e8e1449f1feaa2ea1e33d011c8419e5))
 
 ## [1.1.1](https://github.com/datapointchris/font/compare/v1.1.0...v1.1.1) (2026-01-15)
-
 
 ### Bug Fixes
 
@@ -37,11 +38,9 @@
 
 ## [1.1.0](https://github.com/datapointchris/font/compare/v1.0.0...v1.1.0) (2026-01-09)
 
-
 ### Features
 
 * upgrade only pulls tagged releases, not unreleased code ([0ca0092](https://github.com/datapointchris/font/commit/0ca009237da3d87a6188a58fa3cdf2ea8c4f2f6b))
-
 
 ### Bug Fixes
 
