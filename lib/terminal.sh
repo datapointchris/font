@@ -109,36 +109,21 @@ get_current_font_size() {
 
 terminal_apply_font() {
   local font="$1"
-  local terminal
-  terminal=$(detect_terminal)
   local platform
   platform=$(detect_platform 2>/dev/null || echo "unknown")
 
   local applied=()
 
-  case "$terminal" in
-    ghostty)
-      if ghostty_apply "$font"; then
-        applied+=("ghostty")
-      fi
-      ;;
-    kitty)
-      if kitty_apply "$font"; then
-        applied+=("kitty")
-      fi
-      ;;
-    windows_terminal)
-      if windows_terminal_apply "$font"; then
-        applied+=("windows-terminal")
-      fi
-      ;;
-    *)
-      echo "Warning: Unknown terminal, attempting all supported terminals" >&2
-      ghostty_apply "$font" 2>/dev/null && applied+=("ghostty")
-      kitty_apply "$font" 2>/dev/null && applied+=("kitty")
-      ;;
-  esac
+  # Always update all terminal configs for consistency across terminals
+  ghostty_apply "$font" 2>/dev/null && applied+=("ghostty")
+  kitty_apply "$font" 2>/dev/null && applied+=("kitty")
 
+  # Windows Terminal only on WSL
+  if [[ "$platform" == "wsl" ]]; then
+    windows_terminal_apply "$font" 2>/dev/null && applied+=("windows-terminal")
+  fi
+
+  # Arch-specific apps
   if [[ "$platform" == "arch" ]]; then
     apply_font_waybar "$font" 2>/dev/null && applied+=("waybar") || true
     apply_font_hyprlock "$font" 2>/dev/null && applied+=("hyprlock") || true
@@ -155,8 +140,6 @@ terminal_apply_font() {
 
 change_font_size() {
   local delta="$1"
-  local terminal
-  terminal=$(detect_terminal)
 
   local current_size
   current_size=$(get_current_font_size)
@@ -177,21 +160,15 @@ change_font_size() {
     return 1
   fi
 
-  case "$terminal" in
-    ghostty)
-      ghostty_set_size "$new_size"
-      ;;
-    kitty)
-      kitty_set_size "$new_size"
-      ;;
-    windows_terminal)
-      windows_terminal_set_size "$new_size"
-      ;;
-    *)
-      echo "Error: Unknown terminal" >&2
-      return 1
-      ;;
-  esac
+  # Update all terminal configs for consistency
+  ghostty_set_size "$new_size" 2>/dev/null || true
+  kitty_set_size "$new_size" 2>/dev/null || true
+
+  local platform
+  platform=$(detect_platform 2>/dev/null || echo "unknown")
+  if [[ "$platform" == "wsl" ]]; then
+    windows_terminal_set_size "$new_size" 2>/dev/null || true
+  fi
 
   echo "$current_size → $new_size"
 }
