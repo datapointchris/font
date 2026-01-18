@@ -59,6 +59,7 @@ usage() {
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
   random               Apply random font from all available fonts
+  last                 Toggle to previously used font
   rank                 Show fonts ranked by likes/dislikes
   log                  View complete history
   list                 List all available font families
@@ -127,6 +128,7 @@ Commands
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
   random               Apply random font from all available fonts
+  last                 Toggle to previously used font
   rank                 Show fonts ranked by likes/dislikes
   log                  View complete history
   list                 List all available font families
@@ -761,6 +763,42 @@ PREVIEW_EOF
   fi
 }
 
+cmd_font_last() {
+  # Get the two most recently applied unique fonts
+  local recent
+  recent=$(get_recently_used 2)
+
+  # Check if we have at least 2 fonts in history
+  local count
+  count=$(echo "$recent" | jq 'length')
+
+  if [[ "$count" -lt 2 ]]; then
+    echo "Error: Need at least 2 fonts in history to toggle"
+    echo "Apply another font first, then use 'font last' to toggle between them."
+    return 1
+  fi
+
+  # Get current font from terminal config
+  local current
+  current=$(get_current_font)
+
+  # Get the two most recent fonts
+  local font_0 font_1
+  font_0=$(echo "$recent" | jq -r '.[0].font')
+  font_1=$(echo "$recent" | jq -r '.[1].font')
+
+  # Toggle: if current matches most recent, switch to previous; otherwise switch to most recent
+  local target
+  if [[ "$current" == "$font_0" ]]; then
+    target="$font_1"
+  else
+    target="$font_0"
+  fi
+
+  echo "Toggling to previous font..."
+  apply_font_cmd "$target"
+}
+
 random_font() {
   mapfile -t all_fonts < <(list_fonts)
 
@@ -884,6 +922,9 @@ main() {
       ;;
     random)
       random_font
+      ;;
+    last)
+      cmd_font_last
       ;;
     rank)
       show_rankings
