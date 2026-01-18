@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/datapointchris/font/compare/v1.4.1...v1.5.0) (2026-01-18)
+
+
+### Features
+
+* add 'font last' command to toggle between recent fonts ([d0a6561](https://github.com/datapointchris/font/commit/d0a6561d35975971ac247892cf06c28003e92a3c))
+
 ## [1.4.2](https://github.com/datapointchris/font/compare/v1.4.1...v1.4.2) (2026-01-17)
 
 ### Code Refactoring
