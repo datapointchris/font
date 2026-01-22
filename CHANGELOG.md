@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/datapointchris/font/compare/v1.5.0...v1.5.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* normalize timezone formats before sorting history entries ([1d7a89a](https://github.com/datapointchris/font/commit/1d7a89a17086a21ea5dd42cd0ce24a1d7123402a))
+
 ## [1.5.0](https://github.com/datapointchris/font/compare/v1.4.1...v1.5.0) (2026-01-18)
 
 
