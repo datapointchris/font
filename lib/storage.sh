@@ -65,15 +65,7 @@ log_action() {
 
 get_history() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s '
-      def parse_ts:
-        if test("[+-][0-9]{2}:[0-9]{2}$") then
-          gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-        else
-          fromdateiso8601
-        end;
-      sort_by(.ts | parse_ts)
-    ' "$FONT_HISTORY_FILE"
+    jq -s 'sort_by(.ts)' "$FONT_HISTORY_FILE"
   else
     echo "[]"
   fi
@@ -81,15 +73,7 @@ get_history() {
 
 get_history_raw() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s -c '
-      def parse_ts:
-        if test("[+-][0-9]{2}:[0-9]{2}$") then
-          gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-        else
-          fromdateiso8601
-        end;
-      sort_by(.ts | parse_ts)[]
-    ' "$FONT_HISTORY_FILE"
+    jq -s -c 'sort_by(.ts)[]' "$FONT_HISTORY_FILE"
   fi
 }
 
