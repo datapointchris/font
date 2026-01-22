@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/datapointchris/font/compare/v1.5.1...v1.5.2) (2026-01-22)
+
+
+### Reverts
+
+* simplify history sorting back to lexicographic comparison ([576aa2e](https://github.com/datapointchris/font/commit/576aa2e1121cb51703671e2ca71f3d853ae5e43b))
+
 ## [1.5.1](https://github.com/datapointchris/font/compare/v1.5.0...v1.5.1) (2026-01-22)
 
 
