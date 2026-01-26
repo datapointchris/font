@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/datapointchris/font/compare/v1.5.2...v1.6.0) (2026-01-26)
+
+
+### Features
+
+* add terminal config initialization on module load ([c510fe7](https://github.com/datapointchris/font/commit/c510fe7a3c88e9f9a9a18d9c98b76063c93fce83))
+
+
+### Bug Fixes
+
+* use uname -n instead of hostname -s in get_machine_id ([f2c0ff1](https://github.com/datapointchris/font/commit/f2c0ff13920332465b88bc8e85ed83311d3d6c05))
+* **waybar:** use direct font-family instead of CSS custom properties ([2048645](https://github.com/datapointchris/font/commit/20486456e7be5b404b9db98b16e04a992abff85a))
+
 ## [1.5.2](https://github.com/datapointchris/font/compare/v1.5.1...v1.5.2) (2026-01-22)
 
 
