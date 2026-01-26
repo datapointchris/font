@@ -9,6 +9,7 @@ TERMINAL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 source "$TERMINAL_LIB_DIR/terminals/ghostty.sh"
 source "$TERMINAL_LIB_DIR/terminals/kitty.sh"
 source "$TERMINAL_LIB_DIR/terminals/windows_terminal.sh"
+source "$TERMINAL_LIB_DIR/arch-apps.sh"
 
 # Initialize terminal config files if they don't exist
 # This prevents errors on first run after fresh install
@@ -34,6 +35,9 @@ font_family monospace
 font_size 17.0
 EOF
   fi
+
+  # Arch-specific apps (waybar, hyprlock, dunst)
+  init_arch_configs
 }
 
 # Run initialization at module load time (same pattern as storage.sh)
@@ -152,11 +156,14 @@ terminal_apply_font() {
     windows_terminal_apply "$font" 2>/dev/null && applied+=("windows-terminal")
   fi
 
-  # Arch-specific apps
+  # Arch-specific apps (uses include/source pattern to avoid modifying tracked dotfiles)
   if [[ "$platform" == "arch" ]]; then
-    apply_font_waybar "$font" 2>/dev/null && applied+=("waybar") || true
-    apply_font_hyprlock "$font" 2>/dev/null && applied+=("hyprlock") || true
-    apply_font_dunst "$font" 2>/dev/null && applied+=("dunst") || true
+    local arch_applied
+    if arch_applied=$(arch_apply_font "$font" 2>/dev/null); then
+      for app in $arch_applied; do
+        applied+=("$app")
+      done
+    fi
   fi
 
   if [[ ${#applied[@]} -gt 0 ]]; then
