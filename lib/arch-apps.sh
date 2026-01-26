@@ -31,7 +31,7 @@ init_arch_configs() {
       cat > "$WAYBAR_FONTS_FILE" << 'EOF'
 /* Font configuration - managed by font tool */
 * {
-    font-family: "monospace", "Font Awesome 6 Free", monospace;
+    font-family: "monospace", monospace;
 }
 EOF
     fi
@@ -85,7 +85,7 @@ waybar_set_font() {
   cat > "$WAYBAR_FONTS_FILE" << EOF
 /* Font configuration - managed by font tool */
 * {
-    font-family: "${font}", "Font Awesome 6 Free", monospace;
+    font-family: "${font}", monospace;
 }
 EOF
 
