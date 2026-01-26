@@ -10,6 +10,35 @@ source "$TERMINAL_LIB_DIR/terminals/ghostty.sh"
 source "$TERMINAL_LIB_DIR/terminals/kitty.sh"
 source "$TERMINAL_LIB_DIR/terminals/windows_terminal.sh"
 
+# Initialize terminal config files if they don't exist
+# This prevents errors on first run after fresh install
+init_terminal_configs() {
+  # Ghostty config
+  if [[ ! -d "$GHOSTTY_CONFIG_DIR" ]]; then
+    mkdir -p "$GHOSTTY_CONFIG_DIR"
+  fi
+  if [[ ! -f "$GHOSTTY_CONFIG_FILE" ]]; then
+    cat > "$GHOSTTY_CONFIG_FILE" << EOF
+font-family = "monospace"
+font-size = 17
+EOF
+  fi
+
+  # Kitty config
+  if [[ ! -d "$KITTY_CONFIG_DIR" ]]; then
+    mkdir -p "$KITTY_CONFIG_DIR"
+  fi
+  if [[ ! -f "$KITTY_CONFIG_FILE" ]]; then
+    cat > "$KITTY_CONFIG_FILE" << EOF
+font_family monospace
+font_size 17.0
+EOF
+  fi
+}
+
+# Run initialization at module load time (same pattern as storage.sh)
+init_terminal_configs
+
 detect_terminal() {
   if [[ -n "${GHOSTTY_RESOURCES_DIR:-}" ]]; then
     echo "ghostty"
