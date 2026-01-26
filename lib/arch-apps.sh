@@ -2,7 +2,8 @@
 # Arch-specific application backends (Waybar, Hyprlock, Dunst)
 # Uses include/source patterns to avoid modifying tracked dotfiles
 
-# Waybar: Uses CSS custom properties
+# Waybar: Uses @import - style.css imports fonts/current.css which sets font-family
+# (GTK CSS doesn't support var() so we set the property directly)
 WAYBAR_FONTS_DIR="$HOME/.config/waybar/fonts"
 WAYBAR_FONTS_FILE="$WAYBAR_FONTS_DIR/current.css"
 
@@ -29,10 +30,8 @@ init_arch_configs() {
     if [[ ! -f "$WAYBAR_FONTS_FILE" ]]; then
       cat > "$WAYBAR_FONTS_FILE" << 'EOF'
 /* Font configuration - managed by font tool */
-/* Import this in style.css: @import "fonts/current.css"; */
-/* Then use: font-family: var(--mono-font), "Font Awesome 6 Free", monospace; */
-:root {
-    --mono-font: "monospace";
+* {
+    font-family: "monospace", "Font Awesome 6 Free", monospace;
 }
 EOF
     fi
@@ -71,8 +70,8 @@ EOF
 
 waybar_get_font() {
   if [[ -f "$WAYBAR_FONTS_FILE" ]]; then
-    grep -o '\--mono-font: "[^"]*"' "$WAYBAR_FONTS_FILE" 2>/dev/null | \
-      sed 's/--mono-font: "//;s/"$//' | head -1
+    grep 'font-family:' "$WAYBAR_FONTS_FILE" 2>/dev/null | \
+      grep -o '"[^"]*"' | head -1 | tr -d '"'
   else
     echo ""
   fi
@@ -85,8 +84,8 @@ waybar_set_font() {
 
   cat > "$WAYBAR_FONTS_FILE" << EOF
 /* Font configuration - managed by font tool */
-:root {
-    --mono-font: "${font}";
+* {
+    font-family: "${font}", "Font Awesome 6 Free", monospace;
 }
 EOF
 
