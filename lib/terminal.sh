@@ -95,9 +95,11 @@ get_screen_resolution() {
 get_machine_id() {
   local platform="${1:-}"
   [[ -z "$platform" ]] && platform=$(detect_platform 2>/dev/null || echo "unknown")
-  local hostname
-  hostname=$(hostname -s 2>/dev/null || hostname)
-  echo "${platform}-${hostname}"
+  local host
+  # uname -n is POSIX and works on macOS, Linux, BSDs
+  host=$(uname -n 2>/dev/null | cut -d. -f1)
+  [[ -z "$host" ]] && host="unknown"
+  echo "${platform}-${host}"
 }
 
 get_current_font() {
