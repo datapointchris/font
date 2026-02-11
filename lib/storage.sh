@@ -114,7 +114,7 @@ get_font_stats() {
       dislikes: map(select(.action == "dislike")) | length,
       notes: map(select(.action == "note")) | length,
       applies: map(select(.action == "apply")) | length,
-      score: (map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length),
+      score: ((map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length)),
       last_used: map(select(.action == "apply")) | max_by(.ts) | .ts // "never",
       platforms: [.[].platform] | unique,
       machines: [.[].machine // "unknown"] | unique
@@ -181,7 +181,7 @@ get_rankings() {
           font: .[0].font,
           likes: map(select(.action == "like")) | length,
           dislikes: map(select(.action == "dislike")) | length,
-          score: (map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length),
+          score: ((map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length)),
           last_used: (map(select(.action == "apply")) | max_by(.ts) | .ts // "never"),
           platforms: [.[].platform] | unique | join(","),
           usage_seconds: ($usage[.[0].font] // 0),
