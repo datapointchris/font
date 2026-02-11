@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/datapointchris/font/compare/v1.6.1...v1.6.2) (2026-02-11)
+
+
+### Bug Fixes
+
+* add parentheses to jq score arithmetic for jq 1.7 compatibility ([dfcfa36](https://github.com/datapointchris/font/commit/dfcfa362e388ba2821af7a25244229e57a08c1a8))
+
 ## [1.6.1](https://github.com/datapointchris/font/compare/v1.6.0...v1.6.1) (2026-02-11)
 
 
