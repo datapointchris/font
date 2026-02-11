@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/datapointchris/font/compare/v1.6.0...v1.6.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* apply Windows Terminal font changes to all profiles, not just defaults ([81ce483](https://github.com/datapointchris/font/commit/81ce48391585dd16a10dc590286af0855dfbc467)), closes [#11](https://github.com/datapointchris/font/issues/11)
+
 ## [1.6.0](https://github.com/datapointchris/font/compare/v1.5.2...v1.6.0) (2026-01-26)
 
 
