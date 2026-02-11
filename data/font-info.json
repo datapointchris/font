@@ -23,12 +23,12 @@
     "license": "SIL Open Font License + MIT",
     "url": "https://www.nerdfonts.com/"
   },
-  "Comic Mono": {
-    "description": "Monospaced version of Comic Sans for a playful coding experience",
+  "ComicMonoNF": {
+    "description": "Monospaced version of Comic Sans with Nerd Font glyphs",
     "known_for": "Fun, casual aesthetic while maintaining readability",
-    "creator": "Shannon Miwa",
+    "creator": "Shannon Miwa (font), Ryan McIntyre (Nerd Fonts)",
     "year": "2018",
-    "license": "MIT",
+    "license": "MIT + SIL",
     "url": "https://dtinth.github.io/comic-mono-font/"
   },
   "ComicShannsMono Nerd Font": {
@@ -63,12 +63,12 @@
     "license": "Apache License 2.0 + MIT",
     "url": "https://www.nerdfonts.com/"
   },
-  "Fira Code": {
-    "description": "Free monospaced font with programming ligatures",
+  "FiraCode Nerd Font": {
+    "description": "Free monospaced font with programming ligatures and Nerd Font glyphs",
     "known_for": "Extensive ligature support for operators (=>, <=, !=, etc.)",
-    "creator": "Nikita Prokopov",
+    "creator": "Nikita Prokopov (font), Ryan McIntyre (Nerd Fonts)",
     "year": "2014",
-    "license": "SIL Open Font License",
+    "license": "SIL Open Font License + MIT",
     "url": "https://github.com/tonsky/FiraCode"
   },
   "Fira Code iScript": {
