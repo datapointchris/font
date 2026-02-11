@@ -50,9 +50,16 @@ windows_terminal_set_font() {
   settings=$(_windows_terminal_find_settings) || return 1
 
   cp "$settings" "${settings}.backup"
-  jq --arg font "$font" \
-    '.profiles.defaults.font.face = $font' \
-    "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+
+  # Update profiles.defaults AND all profile-specific font settings
+  jq --arg font "$font" '
+    .profiles.defaults.font.face = $font |
+    .profiles.list = [.profiles.list[] |
+      if .font != null then .font.face = $font
+      else . + {font: {face: $font}}
+      end
+    ]
+  ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
 }
 
 windows_terminal_set_size() {
@@ -61,9 +68,16 @@ windows_terminal_set_size() {
   settings=$(_windows_terminal_find_settings) || return 1
 
   cp "$settings" "${settings}.backup"
-  jq --argjson size "$size" \
-    '.profiles.defaults.font.size = $size' \
-    "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+
+  # Update profiles.defaults AND all profile-specific font settings
+  jq --argjson size "$size" '
+    .profiles.defaults.font.size = $size |
+    .profiles.list = [.profiles.list[] |
+      if .font != null then .font.size = $size
+      else . + {font: {size: $size}}
+      end
+    ]
+  ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
 }
 
 windows_terminal_apply() {
