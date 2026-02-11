@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.3](https://github.com/datapointchris/font/compare/v1.6.2...v1.6.3) (2026-02-11)
+
+
+### Bug Fixes
+
+* normalize old font and machine names in history on read and sync ([60835c5](https://github.com/datapointchris/font/commit/60835c5e37cba211b8833630f3e84ea5f340f9ca))
+* rename Comic Mono and Fira Code to canonical names in font-info ([640a918](https://github.com/datapointchris/font/commit/640a918a78af7bc8f3b6b8a35c5585606e8349a7))
+
 ## [1.6.2](https://github.com/datapointchris/font/compare/v1.6.1...v1.6.2) (2026-02-11)
 
 
