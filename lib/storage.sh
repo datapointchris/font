@@ -27,7 +27,7 @@ _jq_normalize_history() {
       elif . == "Fira Code" then "FiraCode Nerd Font"
       elif . == "FiraCode Nerd Font Mono" then "FiraCode Nerd Font"
       elif . == "CaskaydiaCove Nerd Font Propo" then "CaskaydiaCove Nerd Font"
-      elif . == "Nimbus Mono PS" then "Nimbus Mono"
+      elif . == "Nimbus Mono" then "Nimbus Mono PS"
       else .
       end;
     def normalize_machine:

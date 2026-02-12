@@ -434,6 +434,20 @@ test_rejection_logic() {
     test_fail "Font not rejected after second reject_font()"
   fi
 
+  # Test 6: Rejection persists after sync rewrites history
+  reject_font "Nimbus Mono PS" "System font on Windows"
+
+  # Simulate sync rewriting history (normalization should NOT rename this font)
+  local normalized
+  normalized=$(jq -s -c "$(_jq_normalize_history)"'map(normalize) | .[]' "$test_history")
+  echo "$normalized" > "$test_history"
+
+  if is_font_rejected "Nimbus Mono PS"; then
+    test_pass "Nimbus Mono PS still rejected after sync"
+  else
+    test_fail "Nimbus Mono PS rejection lost after sync (bad normalization?)"
+  fi
+
   # Cleanup
   rm -rf "$test_dir"
   FONT_HISTORY_FILE="$orig_history"

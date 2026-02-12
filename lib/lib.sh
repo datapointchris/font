@@ -92,8 +92,8 @@ get_font_file_path() {
     fi
   fi
 
-  # Nimbus Mono - use Bold for better visibility (only has Regular and Bold)
-  if [[ "$font_name" == "Nimbus Mono" ]]; then
+  # Nimbus Mono PS - use Bold for better visibility (only has Regular and Bold)
+  if [[ "$font_name" == "Nimbus Mono PS" ]]; then
     font_file=$(fc-list : family file style | grep -F "$font_name" | grep -iE "style=Bold$" | head -1 | cut -d: -f1 | xargs)
     if [[ -n "$font_file" ]]; then
       echo "$font_file"
