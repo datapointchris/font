@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4](https://github.com/datapointchris/font/compare/v1.6.3...v1.6.4) (2026-02-12)
+
+
+### Bug Fixes
+
+* flip Nimbus Mono PS normalization to match fc-list output ([ef5d3d4](https://github.com/datapointchris/font/commit/ef5d3d4d04a7a73dbed4d6db9a31042723d591e3))
+
 ## [1.6.3](https://github.com/datapointchris/font/compare/v1.6.2...v1.6.3) (2026-02-11)
 
 
