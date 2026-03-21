@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.5](https://github.com/datapointchris/font/compare/v1.6.4...v1.6.5) (2026-03-21)
+
+
+### Bug Fixes
+
+* validate font apply and remove CommitMono entries ([cbfbb24](https://github.com/datapointchris/font/commit/cbfbb24c001097b7a6a05213b3a6b98aea82baee))
+
 ## [1.6.4](https://github.com/datapointchris/font/compare/v1.6.3...v1.6.4) (2026-02-12)
 
 
