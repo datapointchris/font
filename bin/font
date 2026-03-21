@@ -903,6 +903,22 @@ main() {
         usage
         exit 1
       fi
+      # Validate font name against installed fonts
+      local available_fonts
+      available_fonts=$(list_fonts)
+      if ! echo "$available_fonts" | grep -Fxq "$2"; then
+        echo "Error: Font '$2' not found"
+        echo ""
+        local suggestions
+        suggestions=$(echo "$available_fonts" | grep -i "${2//[-_ ]/.*}" | head -5)
+        if [[ -n "$suggestions" ]]; then
+          echo "Did you mean:"
+          echo "$suggestions" | sed 's/^/  /'
+        fi
+        echo ""
+        echo "Run 'font list' to see all available fonts."
+        exit 1
+      fi
       apply_font_cmd "$2"
       ;;
     size-up)

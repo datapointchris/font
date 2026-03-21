@@ -49,22 +49,6 @@
     "license": "MIT + SIL",
     "url": "https://github.com/kaBeech/serious-shanns"
   },
-  "CommitMono": {
-    "description": "Neutral programming typeface by Eigil Nikolajsen. Distinctive 'smart kerning' adjusts letter spacing based on neighboring character widths to improve word-shape recognition and reading speed. Ligatures are included but off by default, and only functional ones (e.g., != → ≠) — no purely aesthetic ligatures.",
-    "known_for": "Smart kerning for improved readability, neutral anonymous aesthetic, functional-only ligatures (off by default)",
-    "creator": "Eigil Nikolajsen",
-    "year": "2023",
-    "license": "SIL Open Font License",
-    "url": "https://commitmono.com/"
-  },
-  "CommitMonoV143": {
-    "description": "CommitMono version 1.43 — a pinned earlier release kept for comparison or preference. Same design philosophy as CommitMono but prior to later refinements.",
-    "known_for": "Specific pinned version of CommitMono with smart kerning and neutral aesthetic",
-    "creator": "Eigil Nikolajsen",
-    "year": "2023",
-    "license": "SIL Open Font License",
-    "url": "https://commitmono.com/"
-  },
   "DroidSansM Nerd Font": {
     "description": "Nerd Font-patched Droid Sans Mono — the monospaced member of the Droid typeface family, commissioned by Google for Android in 2006. Designed for screen legibility on mobile devices. Same designer as Andale Mono. Features upright stress, open forms, and a neutral appearance optimized for UI text.",
     "known_for": "Android's original monospaced font, mobile-optimized legibility, clean neutral design, slashed zero",
