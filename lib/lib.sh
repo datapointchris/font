@@ -67,7 +67,27 @@ list_fonts() {
           }
         }
       }
-    ' | sort -u
+    ' | sort -u | \
+    awk '
+      # Remove base fonts when a Nerd Font variant exists
+      # e.g., "Fira Code" removed because "FiraCode Nerd Font" exists
+      {fonts[NR] = $0}
+      END {
+        for (i = 1; i <= NR; i++) {
+          if (fonts[i] ~ /Nerd Font/) {
+            base = fonts[i]; sub(/ Nerd Font.*/, "", base); gsub(/ /, "", base)
+            nerd_bases[tolower(base)] = 1
+          }
+        }
+        for (i = 1; i <= NR; i++) {
+          if (fonts[i] !~ /Nerd Font/) {
+            check = fonts[i]; gsub(/ /, "", check)
+            if (tolower(check) in nerd_bases) continue
+          }
+          print fonts[i]
+        }
+      }
+    '
 }
 
 # Get the file path for a font by family name
