@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/datapointchris/font/compare/v1.7.1...v1.7.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* support macOS in font install --check ([8eacee5](https://github.com/datapointchris/font/commit/8eacee5e2b72ea19d2388f3d902f9dbbe4a16e59))
+
 ## [1.7.1](https://github.com/datapointchris/font/compare/v1.7.0...v1.7.1) (2026-03-23)
 
 
