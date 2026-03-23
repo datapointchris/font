@@ -15,79 +15,14 @@ PREVIEW_CACHE_DIR="${PREVIEW_CACHE_DIR:-$HOME/.cache/font/previews}"
 # CORE FUNCTIONS - Each can be tested independently
 # ==============================================================================
 
-# List all available code fonts from fc-list (internal, unfiltered)
-# Returns: One font family name per line
-_list_fonts_all() {
-  fc-list : family | grep -iE "nerd|fira|code|mono|shanns|iosevka|jetbrains|3270" | sort -u
-}
+FONT_REGISTRY_FILE="$FONT_APP_DIR/data/font-registry.json"
 
-# List only main font families (filtered - this is the default)
-# Aggressively removes: Bold, Italic, Light, Medium, Condensed, Extended, etc.
-# Returns: One main font family name per line
+# List managed fonts from the registry
+# Returns: One font family name per line (only managed: true entries)
 list_fonts() {
-  _list_fonts_all | awk -F',' '{print $1}' | \
-    grep -viE '(bold|italic|light|medium|heavy|thin|black|semibold|extrabold|ultralight|extralight|book|demi|oblique|slant|condensed|expanded|extended|narrow|wide|semicond|semcond|compressed|compact)' | \
-    grep -vE '^(\.|SF )' | \
-    grep -viE '^(Arial|Courier|Geneva|Helvetica|Times|Verdana|STIX)' | \
-    sort -u | \
-    awk '
-      # Remove duplicate base families (e.g., keep "Fira Code" but remove "Fira Code Mono" if "Fira Code" exists)
-      {
-        # Store the font name
-        font = $0
-        base = font
-
-        # Check if this is a "Mono" variant
-        if (font ~ / Mono$/) {
-          # Remove " Mono" to get base name
-          sub(/ Mono$/, "", base)
-          # Store both the base and the mono variant
-          if (!(base in seen)) {
-            mono_variants[base] = font
-          }
-        }
-
-        # Always store the font
-        fonts[NR] = font
-        seen[font] = 1
-      }
-      END {
-        # Print fonts, but skip Mono variants if base exists
-        for (i = 1; i <= NR; i++) {
-          font = fonts[i]
-          if (font ~ / Mono$/) {
-            base = font
-            sub(/ Mono$/, "", base)
-            # Only print if base does not exist
-            if (!(base in seen)) {
-              print font
-            }
-          } else {
-            print font
-          }
-        }
-      }
-    ' | sort -u | \
-    awk '
-      # Remove base fonts when a Nerd Font variant exists
-      # e.g., "Fira Code" removed because "FiraCode Nerd Font" exists
-      {fonts[NR] = $0}
-      END {
-        for (i = 1; i <= NR; i++) {
-          if (fonts[i] ~ /Nerd Font/) {
-            base = fonts[i]; sub(/ Nerd Font.*/, "", base); gsub(/ /, "", base)
-            nerd_bases[tolower(base)] = 1
-          }
-        }
-        for (i = 1; i <= NR; i++) {
-          if (fonts[i] !~ /Nerd Font/) {
-            check = fonts[i]; gsub(/ /, "", check)
-            if (tolower(check) in nerd_bases) continue
-          }
-          print fonts[i]
-        }
-      }
-    '
+  if [[ -f "$FONT_REGISTRY_FILE" ]] && command -v jq &>/dev/null; then
+    jq -r 'to_entries[] | select(.value.managed == true) | .key' "$FONT_REGISTRY_FILE" | sort
+  fi
 }
 
 # Get the file path for a font by family name
@@ -375,15 +310,14 @@ count_fonts() {
 # FONT INFO DISPLAY
 # ==============================================================================
 
-# Get font information from font-info.json
+# Get font information from registry
 # Args: $1 - font name
 # Returns: JSON object with font info
 get_font_info() {
   local font="$1"
-  local info_file="$FONT_APP_DIR/data/font-info.json"
 
-  if [[ -f "$info_file" ]] && command -v jq &>/dev/null; then
-    jq -r --arg font "$font" '.[$font] // {}' "$info_file"
+  if [[ -f "$FONT_REGISTRY_FILE" ]] && command -v jq &>/dev/null; then
+    jq -r --arg font "$font" '.[$font] // {}' "$FONT_REGISTRY_FILE"
   else
     echo "{}"
   fi

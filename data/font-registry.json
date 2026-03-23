@@ -5,7 +5,8 @@
     "creator": "Ricardo Bánffy (3270font), Ryan McIntyre (Nerd Fonts)",
     "year": "2011 (font), 1971 (original IBM terminal)",
     "license": "BSD-3-Clause + MIT",
-    "url": "https://github.com/rbanffy/3270font"
+    "url": "https://github.com/rbanffy/3270font",
+    "managed": false
   },
   "Andale Mono": {
     "description": "Monospaced sans-serif originally designed for the Taligent project (Apple/IBM joint venture) and later distributed as part of Microsoft's Core Fonts for the Web. First shipped as 'Monotype.com' with IE4, renamed to Andale Mono with IE5. Now bundled with macOS. Same designer as Droid Sans Mono.",
@@ -13,7 +14,8 @@
     "creator": "Steve Matteson (Monotype/Ascender)",
     "year": "1995",
     "license": "Proprietary (bundled with macOS)",
-    "url": "https://en.wikipedia.org/wiki/Andal%C3%A9_Mono"
+    "url": "https://en.wikipedia.org/wiki/Andal%C3%A9_Mono",
+    "managed": false
   },
   "CaskaydiaCove Nerd Font": {
     "description": "Nerd Font-patched version of Microsoft's Cascadia Code, the default font for Windows Terminal. Features programming ligatures and a cursive italic variant (activatable via OpenType ss01). Named 'CaskaydiaCove' due to Nerd Fonts naming restrictions; the official Cascadia Code NF now exists separately from Microsoft.",
@@ -21,33 +23,37 @@
     "creator": "Aaron Bell (Microsoft), Ryan McIntyre (Nerd Fonts)",
     "year": "2019 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://github.com/microsoft/cascadia-code"
+    "url": "https://github.com/microsoft/cascadia-code",
+    "managed": false
   },
-  "ComicMonoNF": {
+  "Comic Mono Nerd Font": {
     "description": "Nerd Font-patched Comic Mono by Thai Pangsakulyanont (dtinth). A monospaced adaptation of Shannon Miwa's Comic Shanns v1 — all glyphs adjusted to equal width using monospacifier. Part of the Comic Sans-inspired font family tree. Sibling to ComicShannsMono (based on v2) and predecessor to SeriousShanns (legibility fork).",
     "known_for": "Comic Sans aesthetic in a proper monospace format, fun casual coding, all glyphs equal width based on Cousine metrics",
     "creator": "Thai Pangsakulyanont (Comic Mono), Shannon Miwa (Comic Shanns v1)",
     "year": "2020 (Comic Mono), 2018 (Comic Shanns)",
     "license": "MIT",
-    "url": "https://dtinth.github.io/comic-mono-font/"
+    "url": "https://dtinth.github.io/comic-mono-font/",
+    "managed": true
   },
-  "ComicShannsMono Nerd Font": {
+  "Comic Shanns Mono Nerd Font": {
     "description": "Nerd Font-patched Comic Shanns Mono by Jesús González — a monospaced adaptation of Shannon Miwa's Comic Shanns v2 (the updated version). Different lineage from Comic Mono (which is based on v1). The Nerd Fonts version includes a manually-added Bold weight inspired by Comic Mono, plus corrected caron/dcaron/tcaron glyphs.",
     "known_for": "Comic Sans v2 aesthetic with proper monospacing, more refined glyphs than v1-based Comic Mono, playful coding",
     "lineage": "Comic Sans → Comic Shanns v2 (Miwa) → Comic Shanns Mono (jesusmgg) → ComicShannsMono Nerd Font",
     "creator": "Jesús González (Comic Shanns Mono), Shannon Miwa (Comic Shanns v2), Ryan McIntyre (Nerd Fonts)",
     "year": "2018 (Comic Shanns), 2020 (Mono adaptation)",
     "license": "MIT + SIL",
-    "url": "https://github.com/jesusmgg/comic-shanns-mono"
+    "url": "https://github.com/jesusmgg/comic-shanns-mono",
+    "managed": true
   },
-  "SeriousShanns Nerd Font Mono": {
+  "Serious Shanns Nerd Font": {
     "description": "Nerd Font-patched Serious Shanns — a legibility-focused fork of Comic Mono (which is based on Comic Shanns v1). Created by kaBeech after discovering Comic Mono improved their coding mindset. Key changes: 'a' redesigned to not look like 'o', 'l' distinguished from '1', 'Y' distinguished from 'y'. Adds Light weight and Italic styles not present in Comic Mono.",
     "known_for": "Best-in-class character disambiguation among Comic Sans-inspired fonts, 'a'/'o' fix, 'l'/'1' fix, 'Y'/'y' fix, Light weight + Italics",
     "lineage": "Comic Sans → Comic Shanns v1 (Miwa) → Comic Mono (dtinth) → Serious Shanns (kaBeech) → SeriousShanns Nerd Font Mono",
     "creator": "kaBeech (Serious Shanns), Thai Pangsakulyanont (Comic Mono), Shannon Miwa (Comic Shanns v1)",
     "year": "2023 (Serious Shanns), 2020 (Comic Mono), 2018 (Comic Shanns)",
     "license": "MIT + SIL",
-    "url": "https://github.com/kaBeech/serious-shanns"
+    "url": "https://github.com/kaBeech/serious-shanns",
+    "managed": true
   },
   "DroidSansM Nerd Font": {
     "description": "Nerd Font-patched Droid Sans Mono — the monospaced member of the Droid typeface family, commissioned by Google for Android in 2006. Designed for screen legibility on mobile devices. Same designer as Andale Mono. Features upright stress, open forms, and a neutral appearance optimized for UI text.",
@@ -55,15 +61,17 @@
     "creator": "Steve Matteson and Terrance Weinzierl (Ascender Corp for Google), Ryan McIntyre (Nerd Fonts)",
     "year": "2007 (font), 2006 (designed)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://en.wikipedia.org/wiki/Droid_(typeface)"
+    "url": "https://en.wikipedia.org/wiki/Droid_(typeface)",
+    "managed": false
   },
-  "FiraCode Nerd Font": {
+  "Fira Code Nerd Font": {
     "description": "Nerd Font-patched Fira Code — the most popular programming font with ligatures. Extended from Mozilla's Fira Mono (designed for Firefox OS). Renders multi-character operators as single glyphs (=>, !==, <=>, ->>, etc.) for visual clarity. Over 140 programming ligatures.",
     "known_for": "Industry-standard programming ligatures (=>, <=, !=, etc.), based on Mozilla's Fira Mono, most popular ligature font on GitHub",
     "creator": "Nikita Prokopov (Fira Code), Ralph du Carrois (Fira Mono for Mozilla), Ryan McIntyre (Nerd Fonts)",
     "year": "2014 (Fira Code), 2013 (Fira Mono)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://github.com/tonsky/FiraCode"
+    "url": "https://github.com/tonsky/FiraCode",
+    "managed": true
   },
   "Fira Code iScript": {
     "description": "A mashup font combining Fira Code (Regular/Bold) with Script12 (Italic). Uses Fira Code's programming ligatures for normal text, but switches to a cursive handwriting style wherever italics appear — comments, keywords, etc. depending on editor theme.",
@@ -71,7 +79,8 @@
     "creator": "Ken Crocken (mashup), Nikita Prokopov (Fira Code)",
     "year": "2018",
     "license": "SIL Open Font License",
-    "url": "https://github.com/kencrocken/FiraCodeiScript"
+    "url": "https://github.com/kencrocken/FiraCodeiScript",
+    "managed": false
   },
   "Hack Nerd Font": {
     "description": "Nerd Font-patched Hack — a typeface designed specifically for source code, evolved from Bitstream Vera Sans Mono (2003) via DejaVu Sans Mono. Redesigned glyph set with over 1,500 characters, optimized for 8-14px sizes. Large x-height with wide apertures and low contrast for screen legibility. Default monospace font for KDE on openSUSE.",
@@ -80,7 +89,8 @@
     "creator": "Chris Simpkins (Hack), Jim Lyles (Bitstream Vera), Ryan McIntyre (Nerd Fonts)",
     "year": "2015 (Hack), 2003 (Bitstream Vera)",
     "license": "MIT + Bitstream Vera License",
-    "url": "https://sourcefoundry.org/hack/"
+    "url": "https://sourcefoundry.org/hack/",
+    "managed": true
   },
   "Intel One Mono": {
     "description": "Monospaced font designed with input from low-vision and legally blind developers through dozens of live testing sessions. Character differentiation is maximized — sloped stems on 'M' (vs 'N'), exaggerated braces/brackets/parens, maximized height differences between upper and lowercase. Won Fast Company Innovation by Design 2024 award.",
@@ -88,7 +98,8 @@
     "creator": "Intel Corporation with Frere-Jones Type and VML",
     "year": "2023",
     "license": "SIL Open Font License",
-    "url": "https://github.com/intel/intel-one-mono"
+    "url": "https://github.com/intel/intel-one-mono",
+    "managed": false
   },
   "Iosevka": {
     "description": "Ultra-customizable monospace typeface with ~143 configurable characters and 19 stylistic sets. Notably narrow/slender compared to most monospace fonts, allowing more columns on screen. Built from code — users can create custom variants via build plans. Provides sans-serif and slab-serif variants across 3 spacing modes.",
@@ -96,7 +107,8 @@
     "creator": "Belleve Invis",
     "year": "2015",
     "license": "SIL Open Font License",
-    "url": "https://typeof.net/Iosevka/"
+    "url": "https://typeof.net/Iosevka/",
+    "managed": false
   },
   "Iosevka Fixed": {
     "description": "Iosevka variant with ligatures disabled for better compatibility in environments that don't handle ligatures well (some terminals, editors). Same narrow spacing as default Iosevka.",
@@ -104,7 +116,8 @@
     "creator": "Belleve Invis",
     "year": "2015",
     "license": "SIL Open Font License",
-    "url": "https://typeof.net/Iosevka/"
+    "url": "https://typeof.net/Iosevka/",
+    "managed": false
   },
   "Iosevka Nerd Font": {
     "description": "Nerd Font-patched Iosevka with dev tool icons. Retains Iosevka's signature narrow design for maximum columns on screen.",
@@ -112,7 +125,8 @@
     "creator": "Belleve Invis (font), Ryan McIntyre (Nerd Fonts)",
     "year": "2015 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://www.nerdfonts.com/"
+    "url": "https://www.nerdfonts.com/",
+    "managed": true
   },
   "Iosevka Slab": {
     "description": "Iosevka with slab serifs — small horizontal strokes at the ends of letterforms. The serifs aid readability at small sizes and give a more traditional 'typewriter' feel while keeping Iosevka's narrow spacing.",
@@ -120,7 +134,8 @@
     "creator": "Belleve Invis",
     "year": "2015",
     "license": "SIL Open Font License",
-    "url": "https://typeof.net/Iosevka/"
+    "url": "https://typeof.net/Iosevka/",
+    "managed": false
   },
   "Iosevka Term": {
     "description": "Iosevka variant where symbols are narrowed to fit terminal column-counting conventions. Unlike default Iosevka where some symbols may be wider, Term forces everything into strict terminal-width columns.",
@@ -128,23 +143,26 @@
     "creator": "Belleve Invis",
     "year": "2015",
     "license": "SIL Open Font License",
-    "url": "https://typeof.net/Iosevka/"
+    "url": "https://typeof.net/Iosevka/",
+    "managed": false
   },
-  "Iosevka Term Slab": {
+  "Iosevka Term Slab Nerd Font": {
     "description": "Combines Iosevka Term's terminal-strict column widths with slab serifs. Best of both: strict monospace metrics for terminals plus serif readability aids.",
     "known_for": "Terminal-strict Iosevka with slab serifs",
     "creator": "Belleve Invis",
     "year": "2015",
     "license": "SIL Open Font License",
-    "url": "https://typeof.net/Iosevka/"
+    "url": "https://typeof.net/Iosevka/",
+    "managed": true
   },
-  "JetBrainsMono Nerd Font": {
+  "JetBrains Mono Nerd Font": {
     "description": "Nerd Font-patched JetBrains Mono — designed by JetBrains for their IDEs. Features 140+ programming ligatures and an increased x-height for better readability at smaller sizes. Functional ligatures only — arrow and operator combinations, not decorative.",
     "known_for": "140+ functional ligatures, increased x-height, designed for IDE use, very popular among JetBrains IDE users",
     "creator": "Philipp Nurullin and Konstantin Bulenkov (JetBrains), Ryan McIntyre (Nerd Fonts)",
     "year": "2020 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://www.jetbrains.com/lp/mono/"
+    "url": "https://www.jetbrains.com/lp/mono/",
+    "managed": true
   },
   "JetBrainsMonoNL Nerd Font": {
     "description": "JetBrains Mono 'No Ligatures' variant with Nerd Font glyphs. Same design as JetBrains Mono but with all programming ligatures removed — for developers who prefer seeing individual characters.",
@@ -152,7 +170,8 @@
     "creator": "Philipp Nurullin and Konstantin Bulenkov (JetBrains), Ryan McIntyre (Nerd Fonts)",
     "year": "2020 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://www.jetbrains.com/lp/mono/"
+    "url": "https://www.jetbrains.com/lp/mono/",
+    "managed": false
   },
   "MesloLGL Nerd Font": {
     "description": "Nerd Font-patched Meslo LG L (Large line gap). Meslo is a customized Apple Menlo with adjusted vertical spacing and a tweaked asterisk. LGL = Large line gap — the most spacious of the three variants. Menlo itself derives from Bitstream Vera Sans Mono → DejaVu Sans Mono.",
@@ -161,7 +180,8 @@
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": false
   },
   "MesloLGLDZ Nerd Font": {
     "description": "Meslo LG L with Dotted Zero — large line gap variant where the zero has a center dot instead of a slash, making 0/O distinction clearer in a different way.",
@@ -169,15 +189,17 @@
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": false
   },
-  "MesloLGM Nerd Font": {
+  "Meslo LGM Nerd Font": {
     "description": "Meslo LG M (Medium line gap) with Nerd Font patches. The middle-ground Meslo variant — less spacious than LGL, more than LGS.",
     "known_for": "Menlo with medium line gap — balanced vertical spacing",
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": true
   },
   "MesloLGMDZ Nerd Font": {
     "description": "Meslo LG M with Dotted Zero — medium line gap variant with center-dot zero.",
@@ -185,7 +207,8 @@
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": false
   },
   "MesloLGS Nerd Font": {
     "description": "Meslo LG S (Small line gap) with Nerd Font patches. The most compact Meslo variant — minimal vertical spacing for maximum lines on screen. Popular with Powerlevel10k Zsh theme.",
@@ -193,7 +216,8 @@
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": false
   },
   "MesloLGSDZ Nerd Font": {
     "description": "Meslo LG S with Dotted Zero — small line gap variant with center-dot zero.",
@@ -201,7 +225,8 @@
     "creator": "André Berg (Meslo), Ryan McIntyre (Nerd Fonts)",
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/andreberg/Meslo-Font"
+    "url": "https://github.com/andreberg/Meslo-Font",
+    "managed": false
   },
   "MonaspiceAr Nerd Font": {
     "description": "Nerd Font-patched Monaspace Argon — the humanist sans-serif member of GitHub's Monaspace superfamily. Friendly and organic with smooth curves. All 5 Monaspace fonts are metrics-compatible, meaning you can mix them (e.g., Argon for code, Radon for comments) in editors that support per-scope font assignment.",
@@ -209,7 +234,8 @@
     "creator": "GitHub Next, Ryan McIntyre (Nerd Fonts)",
     "year": "2023",
     "license": "SIL Open Font License + MIT",
-    "url": "https://monaspace.githubnext.com/"
+    "url": "https://monaspace.githubnext.com/",
+    "managed": false
   },
   "MonaspiceKr Nerd Font": {
     "description": "Nerd Font-patched Monaspace Krypton — the mechanical sans-serif member of the Monaspace superfamily. Futuristic and precise with a technical aesthetic. Metrics-compatible with Argon, Neon, Radon, and Xenon for mixing.",
@@ -217,15 +243,17 @@
     "creator": "GitHub Next, Ryan McIntyre (Nerd Fonts)",
     "year": "2023",
     "license": "SIL Open Font License + MIT",
-    "url": "https://monaspace.githubnext.com/"
+    "url": "https://monaspace.githubnext.com/",
+    "managed": false
   },
-  "MonaspiceNe Nerd Font": {
+  "Monaspice Ne Nerd Font": {
     "description": "Nerd Font-patched Monaspace Neon — the neo-grotesque sans-serif member of the Monaspace superfamily. Clean, modern, and minimalist with subtle warmth. The most 'normal' of the five Monaspace faces. Metrics-compatible with the other four for mixing.",
     "known_for": "Neo-grotesque style — clean and modern, the 'default' Monaspace face, part of GitHub's mixable superfamily",
     "creator": "GitHub Next, Ryan McIntyre (Nerd Fonts)",
     "year": "2023",
     "license": "SIL Open Font License + MIT",
-    "url": "https://monaspace.githubnext.com/"
+    "url": "https://monaspace.githubnext.com/",
+    "managed": true
   },
   "MonaspiceRn Nerd Font": {
     "description": "Nerd Font-patched Monaspace Radon — the handwriting member of the Monaspace superfamily. Playful and quirky with dynamic movement. Often used as the italic/comment face when mixing Monaspace fonts. Metrics-compatible with the other four.",
@@ -233,7 +261,8 @@
     "creator": "GitHub Next, Ryan McIntyre (Nerd Fonts)",
     "year": "2023",
     "license": "SIL Open Font License + MIT",
-    "url": "https://monaspace.githubnext.com/"
+    "url": "https://monaspace.githubnext.com/",
+    "managed": false
   },
   "MonaspiceXe Nerd Font": {
     "description": "Nerd Font-patched Monaspace Xenon — the slab-serif member of the Monaspace superfamily. Bold and confident with sturdy structure. Gives code an authoritative, typeset-book quality. Metrics-compatible with the other four for mixing.",
@@ -241,7 +270,8 @@
     "creator": "GitHub Next, Ryan McIntyre (Nerd Fonts)",
     "year": "2023",
     "license": "SIL Open Font License + MIT",
-    "url": "https://monaspace.githubnext.com/"
+    "url": "https://monaspace.githubnext.com/",
+    "managed": false
   },
   "Nimbus Mono PS": {
     "description": "URW++ Courier replacement from the Ghostscript base-35 PostScript fonts. Ships as a system font on most Linux distros and WSL. Designed to be metrically compatible with Courier — not a programming font, but a document/PostScript font. 'PS' indicates the current PostScript-era naming; earlier versions were called 'Nimbus Mono L'.",
@@ -249,7 +279,8 @@
     "creator": "URW++ Design & Development GmbH",
     "year": "1999 (original), 2017 (PS version via ArtifexSoftware/urw-base35-fonts)",
     "license": "AGPL + Font Exception",
-    "url": "https://github.com/ArtifexSoftware/urw-base35-fonts"
+    "url": "https://github.com/ArtifexSoftware/urw-base35-fonts",
+    "managed": false
   },
   "PT Mono": {
     "description": "Monospaced font from ParaType's PT superfamily, originally developed for the Russian government's 'Public Types of Russian Federation' project. Designed for forms, tables, and structured documents where equal character widths matter for calculating field sizes and column alignment. Exceptional Cyrillic coverage including nearly all minority languages of the Russian Federation.",
@@ -257,15 +288,17 @@
     "creator": "Alexandra Korolkova with Isabella Chaeva (ParaType), funded by Google",
     "year": "2011",
     "license": "SIL Open Font License",
-    "url": "https://fonts.google.com/specimen/PT+Mono"
+    "url": "https://fonts.google.com/specimen/PT+Mono",
+    "managed": false
   },
-  "RobotoMono Nerd Font": {
+  "Roboto Mono Nerd Font": {
     "description": "Nerd Font-patched Roboto Mono — the monospaced member of Google's Roboto family. Adapts forms for monospace constraints: narrow glyphs like 'I', 'l', 'i' gain serifs for even texture, while wide glyphs like 'C', 'O' take on straighter sides from Roboto Condensed. Five weights with matching italics.",
     "known_for": "Google's monospace with adaptive glyph forms, mechanical skeleton + friendly curves, optimized for screens across devices",
     "creator": "Christian Robertson (Google), Ryan McIntyre (Nerd Fonts)",
     "year": "2015 (font)",
     "license": "Apache License 2.0 + MIT",
-    "url": "https://github.com/googlefonts/RobotoMono"
+    "url": "https://github.com/googlefonts/RobotoMono",
+    "managed": true
   },
   "SauceCodePro Nerd Font": {
     "description": "Nerd Font-patched Source Code Pro — Adobe's first open-source font family, designed as the monospaced companion to Source Sans. Named 'SauceCodePro' due to Nerd Fonts naming restrictions. Optimized for UI environments with careful 0/O, 1/l/I disambiguation. Six weights (ExtraLight to Bold) with italics added in 2015, variable format in 2018.",
@@ -273,7 +306,8 @@
     "creator": "Paul D. Hunt (Adobe), Ryan McIntyre (Nerd Fonts)",
     "year": "2012 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://github.com/adobe-fonts/source-code-pro"
+    "url": "https://github.com/adobe-fonts/source-code-pro",
+    "managed": false
   },
   "SpaceMono Nerd Font": {
     "description": "Nerd Font-patched Space Mono — a 'monospace-first, monospace-only' typeface commissioned by Google from Colophon Foundry (London/LA). Combines grotesque and geometric influences, partly based on their Basis Grotesque. Designed as an editorial display face that happens to be monospaced — more typographic personality than typical coding fonts.",
@@ -281,7 +315,8 @@
     "creator": "Colophon Foundry (Critton, Harrington, Sheret) for Google, Ryan McIntyre (Nerd Fonts)",
     "year": "2016 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://fonts.google.com/specimen/Space+Mono"
+    "url": "https://fonts.google.com/specimen/Space+Mono",
+    "managed": false
   },
   "Terminess Nerd Font": {
     "description": "Nerd Font-patched Terminus — a clean fixed-width bitmap font designed for 8+ hour daily terminal use. The TrueType version preserves the bitmap aesthetic. Original supports 120+ language sets at specific pixel sizes (6x12 through 16x32). One of the few bitmap-origin fonts in common use.",
@@ -289,7 +324,8 @@
     "creator": "Dimitar Zhekov (Terminus), Ryan McIntyre (Nerd Fonts)",
     "year": "2004 (font)",
     "license": "SIL Open Font License + MIT",
-    "url": "https://terminus-font.sourceforge.net/"
+    "url": "https://terminus-font.sourceforge.net/",
+    "managed": false
   },
   "Victor Mono": {
     "description": "Slender, crisp programming font with semi-connected cursive italics — the italics have a handwritten flow while staying readable. Seven weights (Thin to Bold) each with Regular, Italic, and Oblique styles (21 total). Large x-height with clear punctuation. Supports Cyrillic, Greek, and Vietnamese.",
@@ -297,6 +333,7 @@
     "creator": "Rune Bjørnerås",
     "year": "2019",
     "license": "SIL Open Font License",
-    "url": "https://rubjo.github.io/victor-mono/"
+    "url": "https://rubjo.github.io/victor-mono/",
+    "managed": false
   }
 }
