@@ -881,13 +881,55 @@ generate_all_previews() {
 FONT_RELEASE_TAG="fonts-v1"
 FONT_RELEASE_REPO="datapointchris/font"
 
+_get_windows_username() {
+  cmd.exe /C 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n' | xargs
+}
+
 _get_system_font_dir() {
   local platform
   platform=$(detect_platform)
   case "$platform" in
     macos) echo "$HOME/Library/Fonts" ;;
+    wsl)
+      local win_user
+      win_user=$(_get_windows_username)
+      if [[ -n "$win_user" ]]; then
+        echo "/mnt/c/Users/$win_user/AppData/Local/Microsoft/Windows/Fonts"
+      else
+        echo "$HOME/.local/share/fonts"
+      fi
+      ;;
     *)     echo "$HOME/.local/share/fonts" ;;
   esac
+}
+
+_register_windows_font() {
+  local font_path="$1"
+  local font_filename="$2"
+
+  local win_path
+  win_path=$(wslpath -w "$font_path" 2>/dev/null) || return 1
+
+  powershell.exe -NoProfile -Command "
+    \$ErrorActionPreference = 'SilentlyContinue'
+    \$fontPath = '$win_path'
+    \$fontFileName = '$font_filename'
+    try {
+      Add-Type -AssemblyName System.Drawing
+      \$fc = New-Object System.Drawing.Text.PrivateFontCollection
+      \$fc.AddFontFile(\$fontPath)
+      \$fontFamily = \$fc.Families[0].Name
+      \$style = ''
+      if (\$fontFileName -match 'Bold' -and \$fontFileName -match 'Italic') { \$style = ' Bold Italic' }
+      elseif (\$fontFileName -match 'Bold') { \$style = ' Bold' }
+      elseif (\$fontFileName -match 'Italic') { \$style = ' Italic' }
+      \$fontName = \"\$fontFamily\$style (TrueType)\"
+    } catch {
+      \$fontName = [System.IO.Path]::GetFileNameWithoutExtension(\$fontFileName) + ' (TrueType)'
+    }
+    \$regPath = 'HKCU:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'
+    Set-ItemProperty -Path \$regPath -Name \$fontName -Value \$fontPath
+  " </dev/null 2>/dev/null || true
 }
 
 install_fonts() {
@@ -961,9 +1003,19 @@ install_fonts() {
   count=$(tar tf "$tmpdir/fonts.tar.xz" | wc -l | xargs)
   echo "Extracted $count font files."
 
-  # Refresh font cache (Linux only, macOS does it automatically)
   local platform
   platform=$(detect_platform)
+
+  # On WSL, register each font in Windows registry
+  if [[ "$platform" == "wsl" ]]; then
+    echo "Registering fonts in Windows..."
+    for font_file in "$font_dir"/*.ttf "$font_dir"/*.otf; do
+      [[ -f "$font_file" ]] || continue
+      _register_windows_font "$font_file" "$(basename "$font_file")"
+    done
+  fi
+
+  # Refresh font cache (Linux/WSL only, macOS does it automatically)
   if [[ "$platform" != "macos" ]]; then
     echo "Refreshing font cache..."
     fc-cache -f 2>/dev/null
