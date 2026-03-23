@@ -20,35 +20,7 @@ FONT_HISTORY_FILE="$FONT_STATE_DIR/history.jsonl"
 
 _jq_normalize_history() {
   cat <<'JQ'
-    def normalize_font:
-      # Managed font renames (old unspaced -> new spaced names)
-      if . == "ComicMonoNF" then "Comic Mono Nerd Font"
-      elif . == "Comic Mono" then "Comic Mono Nerd Font"
-      elif . == "ComicMono Nerd Font" then "Comic Mono Nerd Font"
-      elif . == "ComicMono NF" then "Comic Mono Nerd Font"
-      elif . == "comic-mono" then "Comic Mono Nerd Font"
-      elif . == "ComicShannsMono Nerd Font" then "Comic Shanns Mono Nerd Font"
-      elif . == "FiraCode Nerd Font" then "Fira Code Nerd Font"
-      elif . == "FiraCode Nerd Font Mono" then "Fira Code Nerd Font"
-      elif . == "Iosevka Term Slab" then "Iosevka Term Slab Nerd Font"
-      elif . == "JetBrainsMono Nerd Font" then "JetBrains Mono Nerd Font"
-      elif . == "MesloLGM Nerd Font" then "Meslo LGM Nerd Font"
-      elif . == "MonaspiceNe Nerd Font" then "Monaspice Ne Nerd Font"
-      elif . == "RobotoMono Nerd Font" then "Roboto Mono Nerd Font"
-      elif . == "robotomono" then "Roboto Mono Nerd Font"
-      elif . == "SeriousShanns Nerd Font Mono" then "Serious Shanns Nerd Font"
-      # Unmanaged normalization (historical corrections)
-      elif . == "CaskaydiaCove Nerd Font Propo" then "CaskaydiaCove Nerd Font"
-      elif . == "Nimbus Mono" then "Nimbus Mono PS"
-      elif . == "CommitMonoV143" then "CommitMono"
-      else .
-      end;
-    def normalize_machine:
-      if . == "darwin-Macmini" then "macos-Macmini"
-      elif . == "arch-" then "arch-archlinux"
-      else .
-      end;
-    def normalize: .font = (.font | normalize_font) | .machine = (.machine | normalize_machine);
+    def normalize: .;
 JQ
 }
 
