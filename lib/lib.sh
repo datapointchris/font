@@ -20,9 +20,7 @@ FONT_REGISTRY_FILE="$FONT_APP_DIR/data/font-registry.json"
 # List managed fonts from the registry
 # Returns: One font family name per line (only managed: true entries)
 list_fonts() {
-  if [[ -f "$FONT_REGISTRY_FILE" ]] && command -v jq &>/dev/null; then
-    jq -r 'to_entries[] | select(.value.managed == true) | .key' "$FONT_REGISTRY_FILE" | sort
-  fi
+  jq -r 'to_entries[] | select(.value.managed == true) | .key' "$FONT_REGISTRY_FILE" | sort
 }
 
 # Get the file path for a font by family name
@@ -315,12 +313,7 @@ count_fonts() {
 # Returns: JSON object with font info
 get_font_info() {
   local font="$1"
-
-  if [[ -f "$FONT_REGISTRY_FILE" ]] && command -v jq &>/dev/null; then
-    jq -r --arg font "$font" '.[$font] // {}' "$FONT_REGISTRY_FILE"
-  else
-    echo "{}"
-  fi
+  jq -r --arg font "$font" '.[$font] // {}' "$FONT_REGISTRY_FILE"
 }
 
 # Display font details (stats + info) - used by both 'font current' and preview
