@@ -99,17 +99,16 @@ _sync_merge_histories() {
   local local_file="$1"
   local remote_content="$2"
 
-  # Combine local and remote, normalize, dedupe, sort by timestamp
+  # Combine local and remote, dedupe, sort by timestamp
   {
     [[ -f "$local_file" ]] && cat "$local_file"
     echo "$remote_content"
-  } | jq -s "$(_jq_normalize_history)
+  } | jq -s '
     flatten |
-    map(select(. != null and . != {} and type == \"object\")) |
-    map(normalize) |
+    map(select(. != null and . != {} and type == "object")) |
     unique_by([.ts, .machine, .font, .action]) |
     sort_by(.ts)
-  " | jq -c '.[]'
+  ' | jq -c '.[]'
 }
 
 # Initialize sync - set up gist and do initial sync
