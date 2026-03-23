@@ -30,12 +30,9 @@ get_version() {
   git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null || echo "dev"
 }
 
-# Rename original list_fonts and create filtered version
-eval "$(declare -f list_fonts | sed '1s/list_fonts/list_fonts_unfiltered/')"
-
-# Override list_fonts to filter out rejected fonts
-list_fonts() {
-  list_fonts_unfiltered | while IFS= read -r font; do
+# List managed fonts excluding rejected ones (for font random)
+list_fonts_not_rejected() {
+  list_fonts | while IFS= read -r font; do
     if ! is_font_rejected "$font"; then
       echo "$font"
     fi
@@ -802,7 +799,7 @@ cmd_font_last() {
 }
 
 random_font() {
-  mapfile -t all_fonts < <(list_fonts)
+  mapfile -t all_fonts < <(list_fonts_not_rejected)
 
   if [[ ${#all_fonts[@]} -eq 0 ]]; then
     echo "Error: No fonts found"
@@ -902,20 +899,9 @@ install_fonts() {
   local font_dir
   font_dir=$(_get_system_font_dir)
 
-  # Curated font families — the canonical list
-  local -a curated_fonts=(
-    "Comic Mono Nerd Font"
-    "Comic Shanns Mono Nerd Font"
-    "Fira Code Nerd Font"
-    "Hack Nerd Font"
-    "Iosevka Nerd Font"
-    "Iosevka Term Slab Nerd Font"
-    "JetBrains Mono Nerd Font"
-    "Meslo LGM Nerd Font"
-    "Monaspice Ne Nerd Font"
-    "Roboto Mono Nerd Font"
-    "Serious Shanns Nerd Font"
-  )
+  # Read curated font list from registry
+  local -a curated_fonts
+  mapfile -t curated_fonts < <(list_fonts)
 
   if $check_only; then
     echo "Curated fonts (${#curated_fonts[@]} families):"
