@@ -72,6 +72,8 @@ usage() {
   sync pull            Force pull from gist
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
+  install              Install curated fonts from GitHub Release
+  install --check      Show which curated fonts are missing
   upgrade              Update font to latest release
   generate-previews    Pre-generate all preview images
   clear-cache          Clear preview cache
@@ -875,6 +877,108 @@ generate_all_previews() {
   echo "  Run 'font preview' for instant browsing"
 }
 
+# ==============================================================================
+# FONT INSTALLATION
+# ==============================================================================
+
+FONT_RELEASE_TAG="fonts-v1"
+FONT_RELEASE_REPO="datapointchris/font"
+
+_get_system_font_dir() {
+  local platform
+  platform=$(detect_platform)
+  case "$platform" in
+    macos) echo "$HOME/Library/Fonts" ;;
+    *)     echo "$HOME/.local/share/fonts" ;;
+  esac
+}
+
+install_fonts() {
+  local check_only=false
+  if [[ "${1:-}" == "--check" ]]; then
+    check_only=true
+  fi
+
+  local font_dir
+  font_dir=$(_get_system_font_dir)
+
+  # Curated font families — the canonical list
+  local -a curated_fonts=(
+    "Comic Mono Nerd Font"
+    "Comic Shanns Mono Nerd Font"
+    "Fira Code Nerd Font"
+    "Hack Nerd Font"
+    "Iosevka Nerd Font"
+    "Iosevka Term Slab Nerd Font"
+    "JetBrains Mono Nerd Font"
+    "Meslo LGM Nerd Font"
+    "Monaspice Ne Nerd Font"
+    "Roboto Mono Nerd Font"
+    "Serious Shanns Nerd Font"
+  )
+
+  if $check_only; then
+    echo "Curated fonts (${#curated_fonts[@]} families):"
+    echo ""
+    local missing=0
+    for font in "${curated_fonts[@]}"; do
+      if fc-list : family | grep -Fq "$font"; then
+        echo "  ✓ $font"
+      else
+        echo "  ✗ $font (not installed)"
+        missing=$((missing + 1))
+      fi
+    done
+    echo ""
+    if [[ $missing -eq 0 ]]; then
+      echo "All fonts installed."
+    else
+      echo "$missing font(s) missing. Run 'font install' to install."
+    fi
+    return 0
+  fi
+
+  if ! command -v gh &>/dev/null; then
+    echo "Error: gh (GitHub CLI) is required for font install" >&2
+    return 1
+  fi
+
+  local tmpdir
+  tmpdir=$(mktemp -d /tmp/font-install-XXXX)
+  trap "rm -rf '$tmpdir'" EXIT
+
+  echo "Downloading curated fonts (release: $FONT_RELEASE_TAG)..."
+  if ! gh release download "$FONT_RELEASE_TAG" \
+    --repo "$FONT_RELEASE_REPO" \
+    --pattern "fonts.tar.xz" \
+    --dir "$tmpdir" 2>/dev/null; then
+    echo "Error: Failed to download fonts from release $FONT_RELEASE_TAG" >&2
+    return 1
+  fi
+
+  echo "Installing to $font_dir..."
+  mkdir -p "$font_dir"
+
+  # Extract directly to font directory
+  tar xf "$tmpdir/fonts.tar.xz" -C "$font_dir"
+
+  local count
+  count=$(tar tf "$tmpdir/fonts.tar.xz" | wc -l | xargs)
+  echo "Extracted $count font files."
+
+  # Refresh font cache (Linux only, macOS does it automatically)
+  local platform
+  platform=$(detect_platform)
+  if [[ "$platform" != "macos" ]]; then
+    echo "Refreshing font cache..."
+    fc-cache -f 2>/dev/null
+  fi
+
+  echo ""
+  echo "✓ Curated fonts installed!"
+  echo "  Run 'font install --check' to verify."
+}
+
 #==============================================================================
 # MAIN COMMAND DISPATCHER
 # ==============================================================================
@@ -994,6 +1098,9 @@ main() {
           exit 1
           ;;
       esac
+      ;;
+    install)
+      install_fonts "${2:-}"
       ;;
     generate-previews)
       generate_all_previews
