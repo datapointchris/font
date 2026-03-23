@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/datapointchris/font/compare/v1.7.0...v1.7.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* update history normalization for new spaced font names ([ab64bd6](https://github.com/datapointchris/font/commit/ab64bd63d283ed8be7b31583fac25a9ab1616e26))
+
 ## [1.7.0](https://github.com/datapointchris/font/compare/v1.6.6...v1.7.0) (2026-03-23)
 
 
