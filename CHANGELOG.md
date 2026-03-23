@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/datapointchris/font/compare/v1.6.6...v1.7.0) (2026-03-23)
+
+
+### Features
+
+* add font install command and curation script ([0360b23](https://github.com/datapointchris/font/commit/0360b2317cbe05a20b6fe95901e832da420c8f66))
+
 ## [1.6.6](https://github.com/datapointchris/font/compare/v1.6.5...v1.6.6) (2026-03-23)
 
 
