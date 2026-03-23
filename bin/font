@@ -922,7 +922,16 @@ install_fonts() {
     echo ""
     local missing=0
     for font in "${curated_fonts[@]}"; do
-      if fc-list : family | grep -Fq "$font"; then
+      # Check via fc-list (Linux) or file existence (macOS)
+      local found=false
+      if command -v fc-list &>/dev/null; then
+        fc-list : family | grep -Fq "$font" && found=true
+      else
+        # macOS: check for font files matching the family name (strip spaces)
+        local pattern="${font// /}"
+        ls "$font_dir"/${pattern}-*.ttf "$font_dir"/${pattern}-*.otf &>/dev/null && found=true
+      fi
+      if $found; then
         echo "  ✓ $font"
       else
         echo "  ✗ $font (not installed)"
