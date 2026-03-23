@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.6](https://github.com/datapointchris/font/compare/v1.6.5...v1.6.6) (2026-03-23)
+
+
+### Bug Fixes
+
+* filter orphan base fonts and normalize lowercase history entries ([ec70cbb](https://github.com/datapointchris/font/commit/ec70cbbef736cf3a7cba38058cea4cec41c87bb4))
+
 ## [1.6.5](https://github.com/datapointchris/font/compare/v1.6.4...v1.6.5) (2026-03-21)
 
 
