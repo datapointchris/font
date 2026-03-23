@@ -18,12 +18,6 @@ else
 fi
 FONT_HISTORY_FILE="$FONT_STATE_DIR/history.jsonl"
 
-_jq_normalize_history() {
-  cat <<'JQ'
-    def normalize: .;
-JQ
-}
-
 _storage_get_terminal_context() {
   if type -t get_terminal_context &>/dev/null; then
     get_terminal_context
@@ -71,7 +65,7 @@ log_action() {
 
 get_history() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s "$(_jq_normalize_history) map(normalize) | sort_by(.ts)" "$FONT_HISTORY_FILE"
+    jq -s 'sort_by(.ts)' "$FONT_HISTORY_FILE"
   else
     echo "[]"
   fi
@@ -79,7 +73,7 @@ get_history() {
 
 get_history_raw() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s -c "$(_jq_normalize_history) map(normalize) | sort_by(.ts) | .[]" "$FONT_HISTORY_FILE"
+    jq -s -c 'sort_by(.ts) | .[]' "$FONT_HISTORY_FILE"
   fi
 }
 
