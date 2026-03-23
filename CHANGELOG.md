@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/datapointchris/font/compare/v1.7.3...v1.8.0) (2026-03-23)
+
+
+### Features
+
+* support local font archive for offline installation ([82e669b](https://github.com/datapointchris/font/commit/82e669b0611fb17fb89880456f5e0281a9185669))
+* support WSL font installation with Windows registry ([dce5e85](https://github.com/datapointchris/font/commit/dce5e854ed7b65fc19caab2a72dc6f02c1511e3f))
+
 ## [1.7.3](https://github.com/datapointchris/font/compare/v1.7.2...v1.7.3) (2026-03-23)
 
 
