@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.3](https://github.com/datapointchris/font/compare/v1.7.2...v1.7.3) (2026-03-23)
+
+
+### Bug Fixes
+
+* remove dead normalization call from sync merge ([62eddd6](https://github.com/datapointchris/font/commit/62eddd6346345eacac97aa8f91e1324f522be8d8))
+
 ## [1.7.2](https://github.com/datapointchris/font/compare/v1.7.1...v1.7.2) (2026-03-23)
 
 
