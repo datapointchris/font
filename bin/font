@@ -975,22 +975,28 @@ install_fonts() {
     return 0
   fi
 
-  if ! command -v gh &>/dev/null; then
-    echo "Error: gh (GitHub CLI) is required for font install" >&2
-    return 1
-  fi
-
   local tmpdir
   tmpdir=$(mktemp -d /tmp/font-install-XXXX)
   trap "rm -rf '$tmpdir'" EXIT
 
-  echo "Downloading curated fonts (release: $FONT_RELEASE_TAG)..."
-  if ! gh release download "$FONT_RELEASE_TAG" \
-    --repo "$FONT_RELEASE_REPO" \
-    --pattern "fonts.tar.xz" \
-    --dir "$tmpdir" 2>/dev/null; then
-    echo "Error: Failed to download fonts from release $FONT_RELEASE_TAG" >&2
-    return 1
+  # Check for local archive first (for environments that can't download from GitHub)
+  local local_archive="$HOME/fonts.tar.xz"
+  if [[ -f "$local_archive" ]]; then
+    echo "Found local archive: $local_archive"
+    cp "$local_archive" "$tmpdir/fonts.tar.xz"
+  else
+    if ! command -v gh &>/dev/null; then
+      echo "Error: gh (GitHub CLI) not found and no local archive at $local_archive" >&2
+      return 1
+    fi
+    echo "Downloading curated fonts (release: $FONT_RELEASE_TAG)..."
+    if ! gh release download "$FONT_RELEASE_TAG" \
+      --repo "$FONT_RELEASE_REPO" \
+      --pattern "fonts.tar.xz" \
+      --dir "$tmpdir" 2>/dev/null; then
+      echo "Error: Failed to download fonts from release $FONT_RELEASE_TAG" >&2
+      return 1
+    fi
   fi
 
   echo "Installing to $font_dir..."
