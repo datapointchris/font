@@ -1203,18 +1203,6 @@ main() {
         git -C "$FONT_APP_DIR" log --format="  • %s" "${before_version}..${latest_tag}" 2>/dev/null || true
       fi
       ;;
-    download)
-      echo "⚠️  DEPRECATED: Font installation has moved to management scripts"
-      echo ""
-      echo "Use these commands instead:"
-      echo "  task fonts:download    # Download coding fonts"
-      echo "  task fonts:install     # Install fonts to system"
-      echo ""
-      echo "Or run directly:"
-      echo "  bash management/scripts/fonts/download.sh"
-      echo "  bash management/scripts/fonts/install.sh"
-      exit 1
-      ;;
     *)
       usage
       exit 1
