@@ -946,6 +946,7 @@ install_fonts() {
   mapfile -t curated_fonts < <(list_fonts)
 
   if $check_only; then
+    echo "Font directory: $font_dir"
     echo "Curated fonts (${#curated_fonts[@]} families):"
     echo ""
     local missing=0
@@ -957,7 +958,7 @@ install_fonts() {
       else
         # macOS: check for font files matching the family name (strip spaces)
         local pattern="${font// /}"
-        ls "$font_dir"/${pattern}-*.ttf "$font_dir"/${pattern}-*.otf &>/dev/null && found=true
+        ls "$font_dir"/"${pattern}"-*.ttf "$font_dir"/"${pattern}"-*.otf &>/dev/null && found=true
       fi
       if $found; then
         echo "  ✓ $font"
@@ -977,7 +978,7 @@ install_fonts() {
 
   local tmpdir
   tmpdir=$(mktemp -d /tmp/font-install-XXXX)
-  trap "rm -rf '$tmpdir'" EXIT
+  trap 'rm -rf "'"$tmpdir"'"' EXIT
 
   # Check for local archive first (for environments that can't download from GitHub)
   local local_archive="$HOME/fonts.tar.xz"
@@ -1070,7 +1071,7 @@ main() {
         suggestions=$(echo "$available_fonts" | grep -i "${2//[-_ ]/.*}" | head -5)
         if [[ -n "$suggestions" ]]; then
           echo "Did you mean:"
-          echo "$suggestions" | sed 's/^/  /'
+          echo "  ${suggestions//$'\n'/$'\n'  }"
         fi
         echo ""
         echo "Run 'font list' to see all available fonts."
@@ -1202,7 +1203,7 @@ main() {
         git -C "$FONT_APP_DIR" log --format="  • %s" "${before_version}..${latest_tag}" 2>/dev/null || true
       fi
       ;;
-    download|install)
+    download)
       echo "⚠️  DEPRECATED: Font installation has moved to management scripts"
       echo ""
       echo "Use these commands instead:"
