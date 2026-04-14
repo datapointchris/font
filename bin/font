@@ -485,8 +485,16 @@ PREVIEW_EOF
 }
 
 show_rankings() {
+  # Only show fonts in the current registry
+  local available
+  available=$(list_fonts)
+
   local rankings
-  rankings=$(get_rankings)
+  rankings=$(get_rankings | while IFS= read -r line; do
+    local font
+    font=$(echo "$line" | jq -r '.font')
+    echo "$available" | grep -Fxq "$font" && echo "$line"
+  done)
 
   if [[ -z "$rankings" ]] || [[ "$rankings" == "null" ]]; then
     echo "No font data yet. Start using fonts and marking likes/dislikes!"

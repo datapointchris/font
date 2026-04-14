@@ -30,6 +30,7 @@ _JQ_NORMALIZE_FONT_NAMES='
     elif .font == "MonaspiceNe Nerd Font" then "Monaspice Ne Nerd Font"
     elif .font == "RobotoMono Nerd Font" then "Roboto Mono Nerd Font"
     elif .font == "SeriousShanns Nerd Font Mono" then "Serious Shanns Nerd Font"
+    elif .font == "Iosevka Term Slab" then "Iosevka Term Slab Nerd Font"
     else .font
     end
   )

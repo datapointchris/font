@@ -41,7 +41,11 @@ windows_terminal_get_size() {
   local settings
   settings=$(_windows_terminal_find_settings) || return 1
 
-  jq -r '.profiles.defaults.font.size // empty' "$settings" 2>/dev/null
+  local size
+  size=$(jq -r '.profiles.defaults.font.size // empty' "$settings" 2>/dev/null)
+
+  # Windows Terminal defaults to size 12 when not explicitly set
+  echo "${size:-12}"
 }
 
 windows_terminal_set_font() {
@@ -49,14 +53,17 @@ windows_terminal_set_font() {
   local settings
   settings=$(_windows_terminal_find_settings) || return 1
 
+  local size
+  size=$(windows_terminal_get_size)
+
   cp "$settings" "${settings}.backup"
 
-  # Update profiles.defaults AND all profile-specific font settings
-  jq --arg font "$font" '
-    .profiles.defaults.font.face = $font |
+  # Update profiles.defaults AND all profile-specific font settings (always include size)
+  jq --arg font "$font" --argjson size "$size" '
+    .profiles.defaults.font = (.profiles.defaults.font // {}) + {face: $font, size: $size} |
     .profiles.list = [.profiles.list[] |
       if .font != null then .font.face = $font
-      else . + {font: {face: $font}}
+      else . + {font: {face: $font, size: $size}}
       end
     ]
   ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
