@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.9.0](https://github.com/datapointchris/font/compare/v1.8.0...v1.9.0) (2026-04-14)
+
+
+### Features
+
+* show font directory path in install --check output ([cf6c72e](https://github.com/datapointchris/font/commit/cf6c72e1a4be2fde7f95bc7d990737380f1862bb))
+
+
+### Bug Fixes
+
+* **ci:** use squash merge for release PRs ([792a6d3](https://github.com/datapointchris/font/commit/792a6d3182404283165ce46b7c49ad77f14052c7))
+* remove stale deprecated download command ([72848df](https://github.com/datapointchris/font/commit/72848df4bea03666ca873aa5b32cd61e96514b33))
+* remove unused hoard command ([381da40](https://github.com/datapointchris/font/commit/381da4087ce8ea06a0fd28bf828e2171d0d52436))
+
 ## [1.8.0](https://github.com/datapointchris/font/compare/v1.7.3...v1.8.0) (2026-03-23)
 
 
