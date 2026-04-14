@@ -18,6 +18,23 @@ else
 fi
 FONT_HISTORY_FILE="$FONT_STATE_DIR/history.jsonl"
 
+# Temporary font name migration (remove after all machines have synced)
+# Old Nerd Font names -> new spaced names from curate-fonts.sh rename step
+_JQ_NORMALIZE_FONT_NAMES='
+  .font = (
+    if .font == "ComicMonoNF" then "Comic Mono Nerd Font"
+    elif .font == "ComicShannsMono Nerd Font" then "Comic Shanns Mono Nerd Font"
+    elif .font == "FiraCode Nerd Font" then "Fira Code Nerd Font"
+    elif .font == "JetBrainsMono Nerd Font" then "JetBrains Mono Nerd Font"
+    elif .font == "MesloLGM Nerd Font" then "Meslo LGM Nerd Font"
+    elif .font == "MonaspiceNe Nerd Font" then "Monaspice Ne Nerd Font"
+    elif .font == "RobotoMono Nerd Font" then "Roboto Mono Nerd Font"
+    elif .font == "SeriousShanns Nerd Font Mono" then "Serious Shanns Nerd Font"
+    else .font
+    end
+  )
+'
+
 _storage_get_terminal_context() {
   if type -t get_terminal_context &>/dev/null; then
     get_terminal_context
@@ -65,7 +82,7 @@ log_action() {
 
 get_history() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s 'sort_by(.ts)' "$FONT_HISTORY_FILE"
+    jq -s "map($_JQ_NORMALIZE_FONT_NAMES) | sort_by(.ts)" "$FONT_HISTORY_FILE"
   else
     echo "[]"
   fi
@@ -73,7 +90,7 @@ get_history() {
 
 get_history_raw() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s -c 'sort_by(.ts) | .[]' "$FONT_HISTORY_FILE"
+    jq -s -c "map($_JQ_NORMALIZE_FONT_NAMES) | sort_by(.ts) | .[]" "$FONT_HISTORY_FILE"
   fi
 }
 

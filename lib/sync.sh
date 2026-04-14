@@ -103,12 +103,13 @@ _sync_merge_histories() {
   {
     [[ -f "$local_file" ]] && cat "$local_file"
     echo "$remote_content"
-  } | jq -s '
+  } | jq -s "
     flatten |
-    map(select(. != null and . != {} and type == "object")) |
+    map(select(. != null and . != {} and type == \"object\")) |
+    map($_JQ_NORMALIZE_FONT_NAMES) |
     unique_by([.ts, .machine, .font, .action]) |
     sort_by(.ts)
-  ' | jq -c '.[]'
+  " | jq -c '.[]'
 }
 
 # Initialize sync - set up gist and do initial sync
