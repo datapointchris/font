@@ -24,4 +24,4 @@ jobs:
         run: |
           gh pr merge ${{ fromJSON(steps.release-please.outputs.pr).number }} \
             --repo ${{ github.repository }} \
-            --rebase
+            --squash
