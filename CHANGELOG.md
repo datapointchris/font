@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/datapointchris/font/compare/v1.9.0...v1.10.0) (2026-04-14)
+
+
+### Features
+
+* normalize old font names on history read and sync merge ([bd652b3](https://github.com/datapointchris/font/commit/bd652b3e47c7f4e69c2eed29f77e185b7976f3ef))
+
 ## [1.9.0](https://github.com/datapointchris/font/compare/v1.8.0...v1.9.0) (2026-04-14)
 
 
