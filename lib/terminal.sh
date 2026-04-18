@@ -79,7 +79,7 @@ get_screen_resolution() {
         sed 's/Resolution: //' | \
         tr -d ' '
       ;;
-    arch|linux)
+    archlinux|linux)
       xrandr 2>/dev/null | grep '\*' | awk '{print $1}' | head -1
       ;;
     wsl)
@@ -159,7 +159,7 @@ terminal_apply_font() {
   fi
 
   # Arch-specific apps (uses include/source pattern to avoid modifying tracked dotfiles)
-  if [[ "$platform" == "arch" ]]; then
+  if [[ "$platform" == "archlinux" ]]; then
     local arch_applied
     if arch_applied=$(arch_apply_font "$font" 2>/dev/null); then
       for app in $arch_applied; do

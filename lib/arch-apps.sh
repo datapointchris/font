@@ -20,7 +20,7 @@ init_arch_configs() {
   # Only initialize on Arch/Linux
   local platform
   platform=$(detect_platform 2>/dev/null || echo "unknown")
-  [[ "$platform" != "arch" ]] && return 0
+  [[ "$platform" != "archlinux" ]] && return 0
 
   # Waybar fonts
   if [[ -d "$HOME/.config/waybar" ]]; then

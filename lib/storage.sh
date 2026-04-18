@@ -106,7 +106,7 @@ detect_platform() {
   elif [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
     echo "wsl"
   elif [[ -f /etc/arch-release ]]; then
-    echo "arch"
+    echo "archlinux"
   elif [[ -f /etc/os-release ]]; then
     . /etc/os-release
     echo "${ID:-linux}"
