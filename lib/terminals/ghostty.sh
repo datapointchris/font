@@ -65,6 +65,7 @@ ghostty_set_font() {
   cat > "$GHOSTTY_CONFIG_FILE" << EOF
 font-family = "${font}"
 font-size = ${size}
+window-title-font-family = "${font}"
 EOF
 
   ghostty_write_css "$font" "$size"
@@ -81,6 +82,7 @@ ghostty_set_size() {
   cat > "$GHOSTTY_CONFIG_FILE" << EOF
 font-family = "${font}"
 font-size = ${size}
+window-title-font-family = "${font}"
 EOF
 
   ghostty_write_css "$font" "$size"
