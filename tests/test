@@ -319,6 +319,67 @@ test_rankings() {
   FONT_STATE_DIR="$orig_state_dir"
 }
 
+test_font_stats() {
+  test_start "Per-font usage stats: session collapse and context mode"
+
+  local test_dir="$FONT_APP_DIR/.test-data-stats-$$"
+  local test_history="$test_dir/history.jsonl"
+  mkdir -p "$test_dir"
+
+  local orig_history="${FONT_HISTORY_FILE:-}"
+  local orig_state_dir="${FONT_STATE_DIR:-}"
+  FONT_HISTORY_FILE="$test_history"
+  FONT_STATE_DIR="$test_dir"
+  : > "$test_history"
+
+  # Font A applied twice back-to-back (one session), then again after B (a
+  # second session). Machine m1 dominates (2 of 3 applies), size 14 dominates.
+  {
+    echo '{"ts":"2026-01-01T10:00:00Z","font":"A","action":"apply","machine":"m1","font_size":14,"terminal":"ghostty"}'
+    echo '{"ts":"2026-01-01T11:00:00Z","font":"A","action":"apply","machine":"m1","font_size":14,"terminal":"ghostty"}'
+    echo '{"ts":"2026-01-01T12:00:00Z","font":"B","action":"apply","machine":"m2","font_size":16,"terminal":"kitty"}'
+    echo '{"ts":"2026-01-01T13:00:00Z","font":"A","action":"apply","machine":"m2","font_size":16,"terminal":"kitty"}'
+  } >> "$test_history"
+
+  local stats
+  stats=$(get_font_usage_stats "A")
+
+  local sessions
+  sessions=$(echo "$stats" | jq -r '.sessions')
+  if [[ "$sessions" -eq 2 ]]; then
+    test_pass "Consecutive same-font applies collapse to one session (2 runs)"
+  else
+    test_fail "Session count was $sessions (expected 2)"
+  fi
+
+  # Completed durations for A: 10->11 (1h) + 11->12 (1h) = 7200s minimum.
+  local usage
+  usage=$(echo "$stats" | jq -r '.usage_seconds')
+  if [[ "$usage" -ge 7200 ]]; then
+    test_pass "Usage seconds accumulate across sessions (>= 7200)"
+  else
+    test_fail "Usage seconds was $usage (expected >= 7200)"
+  fi
+
+  local mode_machine mode_size
+  mode_machine=$(get_font_context_mode "A" | jq -r '.machine')
+  mode_size=$(get_font_context_mode "A" | jq -r '.size')
+  if [[ "$mode_machine" == "m1" ]]; then
+    test_pass "Context mode picks most common machine (m1)"
+  else
+    test_fail "Context mode machine was '$mode_machine' (expected 'm1')"
+  fi
+  if [[ "$mode_size" == "14" ]]; then
+    test_pass "Context mode picks most common font size (14)"
+  else
+    test_fail "Context mode size was '$mode_size' (expected '14')"
+  fi
+
+  rm -rf "$test_dir"
+  FONT_HISTORY_FILE="$orig_history"
+  FONT_STATE_DIR="$orig_state_dir"
+}
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -350,6 +411,7 @@ main() {
   test_terminal_detection
   test_rejection_logic
   test_rankings
+  test_font_stats
 
   # Summary
   echo ""

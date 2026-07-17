@@ -180,6 +180,89 @@ calculate_usage_time() {
   '
 }
 
+# Usage detail for a single font: total seconds, session count, average session,
+# last-used timestamp, and seconds since last use. Usage is computed the same way
+# as calculate_usage_time (time until the next apply of any font), so numbers
+# agree across the tool. A "session" is a maximal run of this font in the apply
+# timeline — re-applying the same font back-to-back stays one session.
+get_font_usage_stats() {
+  local font="$1"
+  local current_font
+  current_font=$(get_current_font 2>/dev/null || echo "")
+
+  get_history | jq -c --arg font "$font" --arg current "$current_font" '
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        fromdateiso8601
+      end;
+
+    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
+    ($applies | length) as $n |
+
+    ([range(0; $n) as $i |
+      $applies[$i] as $a |
+      if $i < ($n - 1) then
+        {font: $a.font, duration: (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))}
+      elif $a.font == $current then
+        {font: $a.font, duration: ((now | floor) - ($a.ts | parse_ts))}
+      else null end
+    ] | map(select(. != null))) as $durations |
+
+    ($durations | map(select(.font == $font) | .duration) | add // 0) as $usage |
+
+    ([range(0; $n) as $i |
+      if $applies[$i].font == $font and ($i == 0 or $applies[$i - 1].font != $font)
+      then 1 else 0 end
+    ] | add // 0) as $sessions |
+
+    ($applies | map(select(.font == $font)) | last) as $last |
+
+    {
+      usage_seconds: $usage,
+      sessions: $sessions,
+      avg_seconds: (if $sessions > 0 then ($usage / $sessions | floor) else 0 end),
+      last_used: ($last.ts // null),
+      seconds_since: (if $last then ((now | floor) - ($last.ts | parse_ts)) else null end)
+    }
+  '
+}
+
+# Most common machine, terminal, and font size across a font's apply records.
+# Nulls when a font has never been applied or a field was never recorded.
+get_font_context_mode() {
+  local font="$1"
+
+  get_history | jq -c --arg font "$font" '
+    def mode(f):
+      map(f) | map(select(. != null and . != ""))
+      | if length == 0 then null else (group_by(.) | max_by(length) | .[0]) end;
+
+    map(select(.font == $font and .action == "apply")) as $a |
+    {machine: ($a | mode(.machine)), terminal: ($a | mode(.terminal)), size: ($a | mode(.font_size))}
+  '
+}
+
+# A font's 1-based position in each ranking (registry-managed fonts only), plus
+# the total ranked. Positions are null when the font is not in the ranked set.
+get_font_rank_positions() {
+  local font="$1"
+  local available_json
+  available_json=$(list_fonts | jq -R . | jq -s .)
+
+  get_rankings | jq -s --argjson avail "$available_json" --arg font "$font" '
+    map(select(.font as $f | ($avail | index($f)) != null)) as $r |
+    ($r | sort_by(.score, .sort_key) | reverse | map(.font) | index($font)) as $li |
+    ($r | sort_by(.usage_seconds) | reverse | map(.font) | index($font)) as $hi |
+    {
+      total: ($r | length),
+      likes_pos: (if $li == null then null else $li + 1 end),
+      hours_pos: (if $hi == null then null else $hi + 1 end)
+    }
+  '
+}
+
 get_rankings() {
   local current_font
   current_font=$(get_current_font 2>/dev/null || echo "")

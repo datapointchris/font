@@ -121,20 +121,17 @@ format_duration() {
   fi
 }
 
-# Total seconds a font was active. calculate_usage_time returns a per-font map
-# for the whole history; we pass the *actual* current font so only the truly
-# active font accrues live (now - last apply) time, then read this font's value.
-_font_usage_seconds() {
-  local font="$1"
+# Format an elapsed number of seconds as a coarse "ago" string for recency.
+format_relative() {
+  local seconds="$1"
 
-  if ! type -t calculate_usage_time &>/dev/null; then
-    echo 0
-    return
+  if [[ "$seconds" -lt 3600 ]]; then
+    echo "just now"
+  elif [[ "$seconds" -lt 86400 ]]; then
+    echo "$((seconds / 3600))h ago"
+  else
+    echo "$((seconds / 86400))d ago"
   fi
-
-  local current
-  current=$(get_current_font 2>/dev/null || echo "")
-  calculate_usage_time "$current" 2>/dev/null | jq -r --arg f "$font" '.[$f] // 0'
 }
 
 # ==============================================================================
@@ -235,16 +232,62 @@ _render_font_stat_footer() {
   applies=$(echo "$stats" | jq -r '.applies // 0')
   platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
 
-  local usage_seconds usage_time
-  usage_seconds=$(_font_usage_seconds "$font")
-  usage_time="not used"
+  # Usage detail: seconds, sessions, average session, recency.
+  local usage_seconds sessions avg_seconds seconds_since
+  usage_seconds=0
+  sessions=0
+  avg_seconds=0
+  seconds_since=""
+  if type -t get_font_usage_stats &>/dev/null; then
+    local usage_stats
+    usage_stats=$(get_font_usage_stats "$font" 2>/dev/null)
+    if [[ -n "$usage_stats" ]]; then
+      usage_seconds=$(echo "$usage_stats" | jq -r '.usage_seconds // 0')
+      sessions=$(echo "$usage_stats" | jq -r '.sessions // 0')
+      avg_seconds=$(echo "$usage_stats" | jq -r '.avg_seconds // 0')
+      seconds_since=$(echo "$usage_stats" | jq -r '.seconds_since // empty')
+    fi
+  fi
+
+  local usage_time="not used"
   [[ "$usage_seconds" -gt 0 ]] && usage_time=$(format_duration "$usage_seconds")
+  local recency=""
+  [[ -n "$seconds_since" ]] && recency=$(format_relative "$seconds_since")
+
+  # Rank positions among registry-managed fonts (likes list and hours list).
+  local likes_pos="" hours_pos="" rank_total=""
+  if type -t get_font_rank_positions &>/dev/null; then
+    local positions
+    positions=$(get_font_rank_positions "$font" 2>/dev/null)
+    if [[ -n "$positions" ]]; then
+      likes_pos=$(echo "$positions" | jq -r '.likes_pos // empty')
+      hours_pos=$(echo "$positions" | jq -r '.hours_pos // empty')
+      rank_total=$(echo "$positions" | jq -r '.total // empty')
+    fi
+  fi
+
+  # Most-used context (machine / terminal / size).
+  local ctx_machine="" ctx_terminal="" ctx_size=""
+  if type -t get_font_context_mode &>/dev/null; then
+    local ctx_mode
+    ctx_mode=$(get_font_context_mode "$font" 2>/dev/null)
+    if [[ -n "$ctx_mode" ]]; then
+      ctx_machine=$(echo "$ctx_mode" | jq -r '.machine // empty')
+      ctx_terminal=$(echo "$ctx_mode" | jq -r '.terminal // empty')
+      ctx_size=$(echo "$ctx_mode" | jq -r '.size // empty')
+    fi
+  fi
 
   echo ""
   if [[ "$format" == "full" ]]; then
     echo "Stats:"
     printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
     printf "  Usage time: %s\n" "$usage_time"
+    if [[ "$sessions" -gt 0 ]]; then
+      printf "  Sessions: %d (avg %s)\n" "$sessions" "$(format_duration "$avg_seconds")"
+    fi
+    [[ -n "$recency" ]] && printf "  Last used: %s\n" "$recency"
+    _render_rank_line "  Rank: " "$likes_pos" "$hours_pos" "$rank_total"
     printf "  Notes: %d\n" "$notes"
     printf "  Times applied: %d\n" "$applies"
     printf "  Platforms: %s\n" "$platforms"
@@ -274,10 +317,50 @@ _render_font_stat_footer() {
       fi
     fi
   else
-    printf "%+d · %d↑ %d↓ · %d× applied" "$score" "$likes" "$dislikes" "$applies"
+    printf "%+d · %d↑ %d↓" "$score" "$likes" "$dislikes"
     [[ "$usage_seconds" -gt 0 ]] && printf " · %s used" "$usage_time"
     echo ""
+
+    printf "%d× applied" "$applies"
+    [[ "$sessions" -gt 0 ]] && printf " · %d sessions · avg %s" "$sessions" "$(format_duration "$avg_seconds")"
+    [[ -n "$recency" ]] && printf " · %s" "$recency"
+    echo ""
+
+    _render_rank_line "rank: " "$likes_pos" "$hours_pos" "$rank_total"
+    _render_context_line "$ctx_machine" "$ctx_terminal" "$ctx_size"
   fi
+}
+
+# Print a rank line like "<prefix>likes #2 · hours #5 of 11", only if at least
+# one position is known. $prefix is the complete label (e.g. "rank: ", "  Rank: ").
+_render_rank_line() {
+  local prefix="$1" likes_pos="$2" hours_pos="$3" total="$4"
+  [[ -z "$likes_pos" && -z "$hours_pos" ]] && return 0
+
+  local line=""
+  [[ -n "$likes_pos" ]] && line="likes #${likes_pos}"
+  if [[ -n "$hours_pos" ]]; then
+    [[ -n "$line" ]] && line="$line · "
+    line="${line}hours #${hours_pos}"
+  fi
+  [[ -n "$total" ]] && line="$line of $total"
+  printf "%s%s\n" "$prefix" "$line"
+}
+
+# Print a "mostly <machine> / <terminal> @ <size>px" context line, only if at
+# least one field is known.
+_render_context_line() {
+  local machine="$1" terminal="$2" size="$3"
+  [[ -z "$machine" && -z "$terminal" && -z "$size" ]] && return 0
+
+  local ctx=""
+  if [[ -n "$machine" && -n "$terminal" ]]; then
+    ctx="$machine / $terminal"
+  else
+    ctx="${machine}${terminal}"
+  fi
+  [[ -n "$size" ]] && ctx="$ctx @ ${size}px"
+  printf "mostly %s\n" "$ctx"
 }
 
 # Display font details. Order: description (About) -> history (line-capped in
