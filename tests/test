@@ -235,6 +235,90 @@ test_rejection_logic() {
   FONT_STATE_DIR="$orig_state_dir"
 }
 
+test_rankings() {
+  test_start "Rankings: registry filter, dual sort, exit-1 regression"
+
+  local test_dir="$FONT_APP_DIR/.test-data-rank-$$"
+  local test_history="$test_dir/history.jsonl"
+  mkdir -p "$test_dir"
+
+  local orig_history="${FONT_HISTORY_FILE:-}"
+  local orig_state_dir="${FONT_STATE_DIR:-}"
+  FONT_HISTORY_FILE="$test_history"
+  FONT_STATE_DIR="$test_dir"
+  : > "$test_history"
+
+  # Two real managed fonts plus one unmanaged font that sorts LAST by score.
+  # An unmanaged lowest-scored font is exactly what used to make `font rank`
+  # exit 1 (the filter loop's final grep failed under `set -e`).
+  local managed_a managed_b
+  managed_a=$(list_fonts | sed -n '1p')
+  managed_b=$(list_fonts | sed -n '2p')
+
+  # managed_a: applied twice + liked (score +1, more usage). managed_b: applied
+  # once (score 0). Unmanaged font is disliked -> lowest score, sorts last (the
+  # exact condition that used to trip the exit-1 bug).
+  {
+    echo "{\"ts\":\"2026-01-01T10:00:00Z\",\"font\":\"$managed_a\",\"action\":\"apply\",\"platform\":\"macos\"}"
+    echo "{\"ts\":\"2026-01-01T12:00:00Z\",\"font\":\"$managed_a\",\"action\":\"like\",\"platform\":\"macos\"}"
+    echo "{\"ts\":\"2026-01-02T10:00:00Z\",\"font\":\"$managed_b\",\"action\":\"apply\",\"platform\":\"macos\"}"
+    echo "{\"ts\":\"2026-01-03T10:00:00Z\",\"font\":\"$managed_a\",\"action\":\"apply\",\"platform\":\"macos\"}"
+    echo "{\"ts\":\"2026-01-04T10:00:00Z\",\"font\":\"ZZZ Unmanaged Font\",\"action\":\"apply\",\"platform\":\"macos\"}"
+    echo "{\"ts\":\"2026-01-04T11:00:00Z\",\"font\":\"ZZZ Unmanaged Font\",\"action\":\"dislike\",\"platform\":\"macos\"}"
+  } >> "$test_history"
+
+  # Replicate the show_rankings filter (managed fonts only), under pipefail.
+  local available_json filtered filter_status
+  available_json=$(list_fonts | jq -R . | jq -s .)
+  set -o pipefail
+  filtered=$(get_rankings | jq -s --argjson avail "$available_json" \
+    'map(select(.font as $f | ($avail | index($f)) != null))')
+  filter_status=$?
+  set +o pipefail
+
+  if [[ $filter_status -eq 0 ]]; then
+    test_pass "Ranking pipeline exits 0 with unmanaged lowest-scored font (exit-1 regression)"
+  else
+    test_fail "Ranking pipeline exited $filter_status (exit-1 regression)"
+  fi
+
+  local kept
+  kept=$(echo "$filtered" | jq 'length')
+  if [[ "$kept" -eq 2 ]]; then
+    test_pass "Registry filter keeps only the 2 managed fonts"
+  else
+    test_fail "Registry filter kept $kept fonts (expected 2)"
+  fi
+
+  if echo "$filtered" | jq -e --arg f "ZZZ Unmanaged Font" 'any(.font == $f)' >/dev/null; then
+    test_fail "Unmanaged font leaked into rankings"
+  else
+    test_pass "Unmanaged font excluded from rankings"
+  fi
+
+  # BY LIKES top = managed_a (score +1 vs managed_b 0)
+  local likes_top
+  likes_top=$(echo "$filtered" | jq -r 'sort_by(.score, .sort_key) | reverse | .[0].font')
+  if [[ "$likes_top" == "$managed_a" ]]; then
+    test_pass "BY LIKES sorts highest score first"
+  else
+    test_fail "BY LIKES top was '$likes_top' (expected '$managed_a')"
+  fi
+
+  # BY HOURS top = managed_a (applied twice, more elapsed usage than managed_b)
+  local hours_top
+  hours_top=$(echo "$filtered" | jq -r 'sort_by(.usage_seconds) | reverse | .[0].font')
+  if [[ "$hours_top" == "$managed_a" ]]; then
+    test_pass "BY HOURS USED sorts most-used first"
+  else
+    test_fail "BY HOURS USED top was '$hours_top' (expected '$managed_a')"
+  fi
+
+  rm -rf "$test_dir"
+  FONT_HISTORY_FILE="$orig_history"
+  FONT_STATE_DIR="$orig_state_dir"
+}
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -265,6 +349,7 @@ main() {
   test_get_font_file_path
   test_terminal_detection
   test_rejection_logic
+  test_rankings
 
   # Summary
   echo ""
