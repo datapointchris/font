@@ -390,6 +390,64 @@ test_font_stats() {
   FONT_STATE_DIR="$orig_state_dir"
 }
 
+test_dashboard() {
+  test_start "Portfolio stats: overview counts and discovery buckets"
+
+  local test_dir="$FONT_APP_DIR/.test-data-dash-$$"
+  local test_history="$test_dir/history.jsonl"
+  mkdir -p "$test_dir"
+
+  local orig_history="${FONT_HISTORY_FILE:-}"
+  local orig_state_dir="${FONT_STATE_DIR:-}"
+  FONT_HISTORY_FILE="$test_history"
+  FONT_STATE_DIR="$test_dir"
+  : > "$test_history"
+
+  # Empty history: overview reports zero fonts, no crash.
+  local empty_tried
+  empty_tried=$(get_stats_overview | jq -r '.fonts_tried')
+  if [[ "$empty_tried" -eq 0 ]]; then
+    test_pass "Overview reports 0 fonts on empty history"
+  else
+    test_fail "Overview reported $empty_tried fonts on empty history"
+  fi
+
+  # A first tried in Jan (re-applied in Feb should not re-count), B in Jan, C in Mar.
+  {
+    echo '{"ts":"2026-01-05T10:00:00Z","font":"A","action":"apply","machine":"m1"}'
+    echo '{"ts":"2026-01-20T10:00:00Z","font":"B","action":"apply","machine":"m1"}'
+    echo '{"ts":"2026-02-10T10:00:00Z","font":"A","action":"apply","machine":"m1"}'
+    echo '{"ts":"2026-02-11T10:00:00Z","font":"A","action":"like","machine":"m1"}'
+    echo '{"ts":"2026-03-01T10:00:00Z","font":"C","action":"apply","machine":"m1"}'
+  } >> "$test_history"
+
+  local tried applies
+  tried=$(get_stats_overview | jq -r '.fonts_tried')
+  applies=$(get_stats_overview | jq -r '.total_applies')
+  if [[ "$tried" -eq 3 && "$applies" -eq 4 ]]; then
+    test_pass "Overview counts 3 fonts tried, 4 applies"
+  else
+    test_fail "Overview counted tried=$tried applies=$applies (expected 3/4)"
+  fi
+
+  # Discovery buckets by first-apply month: Jan has A and B, Mar has C. Feb's
+  # re-apply of A must not appear.
+  local discovery
+  discovery=$(get_stats_discovery)
+  local jan_count feb_present
+  jan_count=$(echo "$discovery" | jq -r '.[] | select(.month == "2026-01") | .count')
+  feb_present=$(echo "$discovery" | jq '[.[] | select(.month == "2026-02")] | length')
+  if [[ "$jan_count" -eq 2 && "$feb_present" -eq 0 ]]; then
+    test_pass "Discovery buckets by first-tried month (Jan=2, no Feb)"
+  else
+    test_fail "Discovery Jan=$jan_count Feb-entries=$feb_present (expected 2 / 0)"
+  fi
+
+  rm -rf "$test_dir"
+  FONT_HISTORY_FILE="$orig_history"
+  FONT_STATE_DIR="$orig_state_dir"
+}
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -422,6 +480,7 @@ main() {
   test_rejection_logic
   test_rankings
   test_font_stats
+  test_dashboard
 
   # Summary
   echo ""

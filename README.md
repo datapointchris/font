@@ -40,7 +40,8 @@ ln -sf ~/.local/share/font/bin/font ~/.local/bin/font
 font current              # Show the active font
 font info                 # Browse fonts and view detailed history
 font list                 # List all available font families
-font rank                 # Fonts ranked by likes/dislikes
+font rank                 # Two rankings: by likes and by hours used
+font stats                # Portfolio dashboard (divergence, discovery, machines)
 font log                  # Complete history with file locations
 ```
 
@@ -92,14 +93,19 @@ Each tracking action appends a timestamped JSON record (UTC) to a per-platform h
 {"ts":"2026-01-04T17:24:03+00:00","platform":"macos","font":"Fira Code","action":"like","message":"Great ligatures"}
 ```
 
-Rankings aggregate likes and dislikes into a score:
+The tool tracks two kinds of signal and keeps them separate rather than blending them:
 
-```text
-Score = (total likes) − (total dislikes)
-```
+- **Stated preference** — likes and dislikes, aggregated into a score (`likes − dislikes`).
+- **Revealed preference** — how long each font was actually active, reconstructed by diffing
+  consecutive `apply` timestamps.
 
-Fonts are sorted by score descending, then by most recent usage. Rejected fonts are hidden from
-`font list` and the picker so you don't keep rediscovering ones you already ruled out.
+`font rank` shows both as separate lists — one **by likes**, one **by hours used** — because a font
+you keep reaching for is a different signal than one you clicked "like" on once. `font stats` is a
+portfolio dashboard: where the two signals diverge (used a lot but never rated, or liked but rarely
+used), how many new fonts you try each month, and your favorite font on each machine.
+
+Rejected fonts are hidden from `font list`, the picker, and the rankings so you don't keep
+rediscovering ones you already ruled out.
 
 ## Data and sync
 

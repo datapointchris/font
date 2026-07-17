@@ -57,7 +57,8 @@ usage() {
   note <message>       Add note to current font (message required)
   random               Apply random font from all available fonts
   last                 Toggle to previously used font
-  rank                 Show fonts ranked by likes/dislikes
+  rank                 Show fonts ranked by likes and by hours used
+  stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all available font families
   reject <message>     Mark current font as rejected (avoids rediscovery)
@@ -125,7 +126,8 @@ Commands
   note <message>       Add note to current font (message required)
   random               Apply random font from all available fonts
   last                 Toggle to previously used font
-  rank                 Show fonts ranked by likes/dislikes
+  rank                 Show fonts ranked by likes and by hours used
+  stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all available font families
   reject <message>     Mark current font as rejected (avoids rediscovery)
@@ -555,6 +557,86 @@ show_rankings() {
   echo ""
 }
 
+show_stats() {
+  local overview
+  overview=$(get_stats_overview)
+
+  if [[ -z "$overview" ]] || [[ "$(echo "$overview" | jq -r '.fonts_tried')" -eq 0 ]]; then
+    echo "No font data yet. Start using fonts!"
+    return
+  fi
+
+  local c_reset='\033[0m'
+  local c_gold='\033[0;33m'
+  local c_blue='\033[0;34m'
+  local c_green='\033[0;32m'
+
+  local fonts_tried span_days total_usage liked rejected applies
+  fonts_tried=$(echo "$overview" | jq -r '.fonts_tried')
+  span_days=$(echo "$overview" | jq -r '.span_days')
+  total_usage=$(echo "$overview" | jq -r '.total_usage_seconds')
+  liked=$(echo "$overview" | jq -r '.liked_fonts')
+  rejected=$(echo "$overview" | jq -r '.rejected_fonts')
+  applies=$(echo "$overview" | jq -r '.total_applies')
+
+  echo ""
+  echo -e "${c_gold}Font Stats${c_reset}"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  printf "Tested %d fonts over %d days · %s total\n" \
+    "$fonts_tried" "$span_days" "$(format_duration "$total_usage")"
+  printf "Liked %d · Rejected %d · %d applies\n" "$liked" "$rejected" "$applies"
+
+  # Stated-vs-revealed divergence
+  local divergence unl lnu
+  divergence=$(get_stats_divergence)
+  unl=$(echo "$divergence" | jq '.used_not_liked | length')
+  lnu=$(echo "$divergence" | jq '.liked_not_used | length')
+  if [[ "$unl" -gt 0 || "$lnu" -gt 0 ]]; then
+    echo ""
+    echo -e "${c_blue}Revealed ≠ stated${c_reset}"
+    if [[ "$unl" -gt 0 ]]; then
+      echo "  Used a lot but never rated:"
+      while IFS=$'\t' read -r font usage; do
+        printf "    %-30s %s\n" "$font" "$(format_duration "$usage")"
+      done < <(echo "$divergence" | jq -r '.used_not_liked[] | "\(.font)\t\(.usage)"')
+    fi
+    if [[ "$lnu" -gt 0 ]]; then
+      echo "  Liked but rarely used:"
+      while IFS=$'\t' read -r font score usage; do
+        printf "    %-30s %+d  %s\n" "$font" "$score" "$(format_duration "$usage")"
+      done < <(echo "$divergence" | jq -r '.liked_not_used[] | "\(.font)\t\(.score)\t\(.usage)"')
+    fi
+  fi
+
+  # Discovery timeline (fonts first tried per month)
+  local discovery
+  discovery=$(get_stats_discovery)
+  if [[ "$(echo "$discovery" | jq 'length')" -gt 0 ]]; then
+    echo ""
+    echo -e "${c_blue}Discovery (new fonts tried per month)${c_reset}"
+    local max_count
+    max_count=$(echo "$discovery" | jq '[.[].count] | max')
+    while IFS=$'\t' read -r month count; do
+      printf "  %s  %b  %d\n" "$month" "$(_rank_bar "$count" "$max_count" 10 "$c_green")" "$count"
+    done < <(echo "$discovery" | jq -r '.[] | "\(.month)\t\(.count)"')
+  fi
+
+  # Favorite font on each machine
+  local favorites
+  favorites=$(get_stats_machine_favorites)
+  if [[ "$(echo "$favorites" | jq 'length')" -gt 0 ]]; then
+    echo ""
+    echo -e "${c_blue}Favorite by machine${c_reset}"
+    local mw
+    mw=$(echo "$favorites" | jq -r '[.[].machine | length] | max')
+    while IFS=$'\t' read -r machine font usage; do
+      printf "  %-${mw}s  %-28s %s\n" "$machine" "$font" "$(format_duration "$usage")"
+    done < <(echo "$favorites" | jq -r '.[] | "\(.machine)\t\(.font)\t\(.usage)"')
+  fi
+  echo ""
+}
+
 show_current_font() {
   local font
   font=$(get_current_font)
@@ -981,6 +1063,9 @@ main() {
       ;;
     rank)
       show_rankings
+      ;;
+    stats)
+      show_stats
       ;;
     log)
       show_log

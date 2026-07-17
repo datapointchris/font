@@ -296,6 +296,109 @@ get_font_rank_positions() {
   '
 }
 
+# ==============================================================================
+# PORTFOLIO STATS (font stats dashboard)
+# ==============================================================================
+
+# Whole-portfolio summary: fonts tried, active span, total testing time, and how
+# often testing ends in a like vs a rejection. Rates are over distinct fonts.
+get_stats_overview() {
+  local current_font usage_map
+  current_font=$(get_current_font 2>/dev/null || echo "")
+  usage_map=$(calculate_usage_time "$current_font")
+
+  get_history | jq -c --argjson usage "$usage_map" '
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        fromdateiso8601
+      end;
+
+    (group_by(.font)) as $byfont |
+    (min_by(.ts).ts // null) as $first |
+    (max_by(.ts).ts // null) as $last |
+    {
+      fonts_tried: ($byfont | length),
+      first_ts: $first,
+      last_ts: $last,
+      span_days: (if $first and $last then (($last | parse_ts) - ($first | parse_ts)) / 86400 | floor else 0 end),
+      total_usage_seconds: ([$usage[]] | add // 0),
+      liked_fonts: ([$byfont[] | select((map(select(.action == "like")) | length) > (map(select(.action == "dislike")) | length))] | length),
+      rejected_fonts: ([$byfont[] | select((map(select(.action == "reject" or .action == "unreject")) | sort_by(.ts) | last | .action) == "reject")] | length),
+      total_applies: ([.[] | select(.action == "apply")] | length)
+    }
+  '
+}
+
+# Stated-vs-revealed divergence: fonts used a lot but never rated (used_not_liked)
+# and fonts liked but barely used (liked_not_used). Rejected fonts are excluded.
+get_stats_divergence() {
+  local current_font usage_map
+  current_font=$(get_current_font 2>/dev/null || echo "")
+  usage_map=$(calculate_usage_time "$current_font")
+
+  get_history | jq -c --argjson usage "$usage_map" '
+    group_by(.font) | map({
+      font: .[0].font,
+      likes: (map(select(.action == "like")) | length),
+      dislikes: (map(select(.action == "dislike")) | length),
+      score: ((map(select(.action == "like")) | length) - (map(select(.action == "dislike")) | length)),
+      usage: ($usage[.[0].font] // 0),
+      rejected: ((map(select(.action == "reject" or .action == "unreject")) | sort_by(.ts) | last | .action // "none") == "reject")
+    })
+    | map(select(.rejected | not))
+    | (map(.usage) | map(select(. > 0))) as $used |
+      (if ($used | length) > 0 then (($used | add) / ($used | length)) else 0 end) as $mean_usage |
+      {
+        used_not_liked: ([.[] | select(.likes == 0 and .dislikes == 0 and .usage > $mean_usage)] | sort_by(-.usage) | .[0:5]),
+        liked_not_used: ([.[] | select(.score > 0 and .usage < $mean_usage)] | sort_by(.usage) | .[0:5])
+      }
+  '
+}
+
+# Count of fonts first tried in each month (exploration pace over time).
+get_stats_discovery() {
+  get_history | jq -c '
+    map(select(.action == "apply"))
+    | group_by(.font) | map({font: .[0].font, first: (min_by(.ts).ts)})
+    | group_by(.first[0:7]) | map({month: .[0].first[0:7], count: length})
+    | sort_by(.month)
+  '
+}
+
+# The most-used font on each machine, by attributed usage time.
+get_stats_machine_favorites() {
+  local current_font
+  current_font=$(get_current_font 2>/dev/null || echo "")
+
+  get_history | jq -c --arg current "$current_font" '
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        fromdateiso8601
+      end;
+
+    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
+    ($applies | length) as $n |
+
+    [range(0; $n) as $i |
+      $applies[$i] as $a |
+      (if $i < ($n - 1) then (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))
+       elif $a.font == $current then ((now | floor) - ($a.ts | parse_ts))
+       else null end) as $dur |
+      if $dur == null then empty else {machine: ($a.machine // "unknown"), font: $a.font, dur: $dur} end
+    ]
+    | group_by(.machine)
+    | map(
+        (group_by(.font) | map({font: .[0].font, usage: (map(.dur) | add)}) | max_by(.usage)) as $top |
+        {machine: .[0].machine, font: $top.font, usage: $top.usage}
+      )
+    | sort_by(-.usage)
+  '
+}
+
 get_rankings() {
   local current_font
   current_font=$(get_current_font 2>/dev/null || echo "")
