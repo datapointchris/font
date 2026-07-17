@@ -93,13 +93,16 @@ get_screen_resolution() {
 }
 
 get_machine_id() {
-  local platform="${1:-}"
-  [[ -z "$platform" ]] && platform=$(detect_platform 2>/dev/null || echo "unknown")
+  # The physical machine's hostname, lowercased. Platform is recorded as its own
+  # field, so it does not belong here — prefixing it (the old "platform-host"
+  # format) both duplicated the platform and split one machine across records
+  # when the platform label changed (e.g. arch -> archlinux). Lowercasing keeps
+  # a host that reports "Macmini" and "macmini" as one machine.
   local host
   # uname -n is POSIX and works on macOS, Linux, BSDs
-  host=$(uname -n 2>/dev/null | cut -d. -f1)
+  host=$(uname -n 2>/dev/null | cut -d. -f1 | tr '[:upper:]' '[:lower:]')
   [[ -z "$host" ]] && host="unknown"
-  echo "${platform}-${host}"
+  echo "$host"
 }
 
 get_current_font() {
@@ -223,7 +226,7 @@ get_terminal_context() {
   resolution=$(get_screen_resolution "$platform")
   font_size=$(get_current_font_size)
   in_tmux=$(detect_tmux)
-  machine=$(get_machine_id "$platform")
+  machine=$(get_machine_id)
 
   jq -nc \
     --arg terminal "$terminal" \

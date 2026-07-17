@@ -390,6 +390,55 @@ test_font_stats() {
   FONT_STATE_DIR="$orig_state_dir"
 }
 
+test_machine_normalization() {
+  test_start "Machine normalization merges drifted labels"
+
+  local test_dir="$FONT_APP_DIR/.test-data-mach-$$"
+  local test_history="$test_dir/history.jsonl"
+  mkdir -p "$test_dir"
+
+  local orig_history="${FONT_HISTORY_FILE:-}"
+  local orig_state_dir="${FONT_STATE_DIR:-}"
+  FONT_HISTORY_FILE="$test_history"
+  FONT_STATE_DIR="$test_dir"
+  : > "$test_history"
+
+  # Legacy platform-host labels with case and platform drift, plus one already
+  # in the new bare-host form, plus two genuinely different WSL machines.
+  {
+    echo '{"ts":"2026-01-01T10:00:00Z","font":"A","action":"apply","machine":"macos-Macmini"}'
+    echo '{"ts":"2026-01-02T10:00:00Z","font":"A","action":"apply","machine":"macos-macmini"}'
+    echo '{"ts":"2026-01-03T10:00:00Z","font":"B","action":"apply","machine":"arch-archlinux"}'
+    echo '{"ts":"2026-01-04T10:00:00Z","font":"B","action":"apply","machine":"archlinux-archlinux"}'
+    echo '{"ts":"2026-01-05T10:00:00Z","font":"C","action":"apply","machine":"mbp"}'
+    echo '{"ts":"2026-01-06T10:00:00Z","font":"D","action":"apply","machine":"wsl-PF4ZV43G"}'
+    echo '{"ts":"2026-01-07T10:00:00Z","font":"E","action":"apply","machine":"wsl-PF5XMXFY"}'
+  } >> "$test_history"
+
+  local machines
+  machines=$(get_history | jq -c '[.[].machine] | unique')
+
+  local expected='["archlinux","macmini","mbp","pf4zv43g","pf5xmxfy"]'
+  if [[ "$machines" == "$expected" ]]; then
+    test_pass "Drifted labels merge; distinct machines stay distinct"
+  else
+    test_fail "Normalized machines were $machines (expected $expected)"
+  fi
+
+  # The two mac-mini records must collapse to a single machine.
+  local macmini_count
+  macmini_count=$(get_history | jq '[.[] | select(.machine == "macmini")] | length')
+  if [[ "$macmini_count" -eq 2 ]]; then
+    test_pass "Both mac-mini records map to one machine label"
+  else
+    test_fail "macmini record count was $macmini_count (expected 2)"
+  fi
+
+  rm -rf "$test_dir"
+  FONT_HISTORY_FILE="$orig_history"
+  FONT_STATE_DIR="$orig_state_dir"
+}
+
 test_dashboard() {
   test_start "Portfolio stats: overview counts and discovery buckets"
 
@@ -480,6 +529,7 @@ main() {
   test_rejection_logic
   test_rankings
   test_font_stats
+  test_machine_normalization
   test_dashboard
 
   # Summary

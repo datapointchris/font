@@ -36,6 +36,23 @@ _JQ_NORMALIZE_FONT_NAMES='
   )
 '
 
+# Canonicalize .machine to a lowercased hostname so one physical machine reads as
+# one machine. Handles the legacy "platform-host" format (strip a known platform
+# prefix) and the current bare-host format alike; leaves records without a
+# machine field untouched. Applied at read time so existing history merges too.
+_JQ_NORMALIZE_MACHINE='
+  if (.machine // null) == null then .
+  else
+    .machine = (
+      (.machine | ascii_downcase)
+      | if test("^(macos|archlinux|arch|wsl|linux|unknown)-")
+        then sub("^(macos|archlinux|arch|wsl|linux|unknown)-"; "")
+        else .
+        end
+    )
+  end
+'
+
 _storage_get_terminal_context() {
   if type -t get_terminal_context &>/dev/null; then
     get_terminal_context
@@ -83,7 +100,7 @@ log_action() {
 
 get_history() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s "map($_JQ_NORMALIZE_FONT_NAMES) | sort_by(.ts)" "$FONT_HISTORY_FILE"
+    jq -s "map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) | sort_by(.ts)" "$FONT_HISTORY_FILE"
   else
     echo "[]"
   fi
@@ -91,7 +108,7 @@ get_history() {
 
 get_history_raw() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    jq -s -c "map($_JQ_NORMALIZE_FONT_NAMES) | sort_by(.ts) | .[]" "$FONT_HISTORY_FILE"
+    jq -s -c "map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) | sort_by(.ts) | .[]" "$FONT_HISTORY_FILE"
   fi
 }
 
