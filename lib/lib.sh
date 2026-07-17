@@ -92,6 +92,51 @@ count_fonts() {
   list_fonts | wc -l | xargs
 }
 
+# Format a duration in seconds as a compact human string (e.g. "2h 15m", "3d").
+# Lives here (not bin/font) so fzf preview subshells, which source only the
+# libs, can render usage times too.
+format_duration() {
+  local seconds="$1"
+
+  if [[ "$seconds" -lt 60 ]]; then
+    echo "${seconds}s"
+  elif [[ "$seconds" -lt 3600 ]]; then
+    echo "$((seconds / 60))m"
+  elif [[ "$seconds" -lt 86400 ]]; then
+    local hours=$((seconds / 3600))
+    local mins=$(((seconds % 3600) / 60))
+    if [[ "$mins" -gt 0 ]]; then
+      echo "${hours}h ${mins}m"
+    else
+      echo "${hours}h"
+    fi
+  else
+    local days=$((seconds / 86400))
+    local hours=$(((seconds % 86400) / 3600))
+    if [[ "$hours" -gt 0 ]]; then
+      echo "${days}d ${hours}h"
+    else
+      echo "${days}d"
+    fi
+  fi
+}
+
+# Total seconds a font was active. calculate_usage_time returns a per-font map
+# for the whole history; we pass the *actual* current font so only the truly
+# active font accrues live (now - last apply) time, then read this font's value.
+_font_usage_seconds() {
+  local font="$1"
+
+  if ! type -t calculate_usage_time &>/dev/null; then
+    echo 0
+    return
+  fi
+
+  local current
+  current=$(get_current_font 2>/dev/null || echo "")
+  calculate_usage_time "$current" 2>/dev/null | jq -r --arg f "$font" '.[$f] // 0'
+}
+
 # ==============================================================================
 # FONT INFO DISPLAY
 # ==============================================================================
@@ -104,7 +149,139 @@ get_font_info() {
   jq -r --arg font "$font" '.[$font] // {}' "$FONT_REGISTRY_FILE"
 }
 
-# Display font details (stats + info)
+# Render the "About" block (registry metadata). Shown first: it's the identity
+# of the font, independent of usage.
+_render_font_about() {
+  local font="$1" format="$2"
+
+  local font_info
+  font_info=$(get_font_info "$font")
+  [[ -z "$font_info" || "$font_info" == "{}" ]] && return 0
+
+  local description known_for creator year url
+  description=$(echo "$font_info" | jq -r '.description // empty')
+  known_for=$(echo "$font_info" | jq -r '.known_for // empty')
+  creator=$(echo "$font_info" | jq -r '.creator // empty')
+  year=$(echo "$font_info" | jq -r '.year // empty')
+  url=$(echo "$font_info" | jq -r '.url // empty')
+
+  [[ -z "$description" ]] && return 0
+
+  if [[ "$format" == "full" ]]; then
+    echo "$description"
+    [[ -n "$known_for" ]] && echo "  Known for: $known_for"
+    [[ -n "$creator" ]] && echo "  Creator: $creator"
+    [[ -n "$year" ]] && echo "  Year: $year"
+    [[ -n "$url" ]] && echo "  URL: $url"
+  else
+    echo "$description"
+    [[ -n "$known_for" ]] && echo "Known for: $known_for"
+    [[ -n "$creator" ]] && echo "Creator: $creator ($year)"
+  fi
+}
+
+# Render this font's action history, oldest to newest.
+# Args: $1 font, $2 limit (0 = all; N = most recent N entries).
+_render_font_history() {
+  local font="$1" limit="$2"
+
+  type -t get_history &>/dev/null || return 0
+
+  local total
+  total=$(get_history | jq --arg font "$font" '[.[] | select(.font == $font)] | length')
+  [[ "$total" -eq 0 ]] && return 0
+
+  local label="History"
+  if [[ "$limit" -gt 0 && "$total" -gt "$limit" ]]; then
+    label="Recent (last $limit of $total)"
+  fi
+
+  echo ""
+  echo "$label"
+  get_history | jq -r --arg font "$font" --argjson limit "$limit" '
+    ( map(select(.font == $font)) | sort_by(.ts) ) as $all |
+    ( if $limit > 0 then $all[-$limit:] else $all end ) |
+    .[] |
+    .action as $act |
+    .ts[0:10] as $date |
+    .message as $msg |
+    if $act == "apply" then "  \($date)  applied"
+    elif $act == "like" then (if $msg then "  \($date)  liked: \($msg)" else "  \($date)  liked" end)
+    elif $act == "dislike" then (if $msg then "  \($date)  disliked: \($msg)" else "  \($date)  disliked" end)
+    elif $act == "note" then "  \($date)  note: \($msg)"
+    elif $act == "reject" then "  \($date)  rejected: \($msg)"
+    elif $act == "unreject" then "  \($date)  unrejected"
+    else "  \($date)  \($act)"
+    end
+  ' 2>/dev/null
+}
+
+# Render the stats footer. Shown last: the numbers read better as a summary
+# after the description and history have set context.
+_render_font_stat_footer() {
+  local font="$1" format="$2"
+
+  type -t get_font_stats &>/dev/null || return 0
+
+  local stats
+  stats=$(get_font_stats "$font" 2>/dev/null)
+  [[ -z "$stats" || "$stats" == "null" ]] && return 0
+
+  local score likes dislikes notes applies platforms
+  score=$(echo "$stats" | jq -r '.score // 0')
+  likes=$(echo "$stats" | jq -r '.likes // 0')
+  dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
+  notes=$(echo "$stats" | jq -r '.notes // 0')
+  applies=$(echo "$stats" | jq -r '.applies // 0')
+  platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
+
+  local usage_seconds usage_time
+  usage_seconds=$(_font_usage_seconds "$font")
+  usage_time="not used"
+  [[ "$usage_seconds" -gt 0 ]] && usage_time=$(format_duration "$usage_seconds")
+
+  echo ""
+  if [[ "$format" == "full" ]]; then
+    echo "Stats:"
+    printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
+    printf "  Usage time: %s\n" "$usage_time"
+    printf "  Notes: %d\n" "$notes"
+    printf "  Times applied: %d\n" "$applies"
+    printf "  Platforms: %s\n" "$platforms"
+    local machines
+    machines=$(echo "$stats" | jq -r '.machines | join(", ") // "unknown"')
+    printf "  Machines: %s\n" "$machines"
+
+    if type -t get_last_terminal_context &>/dev/null; then
+      local ctx
+      ctx=$(get_last_terminal_context "$font" 2>/dev/null)
+      if [[ -n "$ctx" && "$ctx" != "{}" && "$ctx" != "null" ]]; then
+        local terminal in_tmux cols rows resolution font_size
+        terminal=$(echo "$ctx" | jq -r '.terminal // "unknown"')
+        in_tmux=$(echo "$ctx" | jq -r '.in_tmux // "unknown"')
+        cols=$(echo "$ctx" | jq -r '.cols // "unknown"')
+        rows=$(echo "$ctx" | jq -r '.rows // "unknown"')
+        resolution=$(echo "$ctx" | jq -r '.resolution // "unknown"')
+        font_size=$(echo "$ctx" | jq -r '.font_size // "unknown"')
+
+        echo ""
+        echo "Last Session:"
+        printf "  Terminal: %s\n" "$terminal"
+        [[ "$cols" != "null" && "$cols" != "unknown" ]] && printf "  Size: %sx%s (cols x rows)\n" "$cols" "$rows"
+        [[ "$font_size" != "null" && "$font_size" != "unknown" ]] && printf "  Font size: %s\n" "$font_size"
+        [[ "$resolution" != "null" && "$resolution" != "unknown" ]] && printf "  Resolution: %s\n" "$resolution"
+        [[ "$in_tmux" != "null" ]] && printf "  In tmux: %s\n" "$in_tmux"
+      fi
+    fi
+  else
+    printf "%+d · %d↑ %d↓ · %d× applied" "$score" "$likes" "$dislikes" "$applies"
+    [[ "$usage_seconds" -gt 0 ]] && printf " · %s used" "$usage_time"
+    echo ""
+  fi
+}
+
+# Display font details. Order: description (About) -> history (line-capped in
+# the compact picker) -> stats footer.
 # Args: $1 - font name
 #       $2 - format ("full" for 'font current'/'font info', "compact" for the change picker)
 display_font_details() {
@@ -116,140 +293,20 @@ display_font_details() {
     source "$FONT_APP_DIR/lib/storage.sh" 2>/dev/null || true
   fi
 
+  local history_limit=0
   if [[ "$format" == "full" ]]; then
     echo ""
-    echo "Current Font: $font"
+    echo "$font"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
   else
     echo "━━━ $font ━━━"
+    history_limit=6
   fi
 
-  # Get stats from history
-  if type -t get_font_stats &>/dev/null; then
-    local stats
-    stats=$(get_font_stats "$font" 2>/dev/null)
-
-    if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
-      local score=$(echo "$stats" | jq -r '.score // 0')
-      local likes=$(echo "$stats" | jq -r '.likes // 0')
-      local dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
-      local notes=$(echo "$stats" | jq -r '.notes // 0')
-      local applies=$(echo "$stats" | jq -r '.applies // 0')
-      local platforms=$(echo "$stats" | jq -r '.platforms | join(", ") // "none"')
-
-      # Calculate usage time
-      if type -t calculate_usage_time &>/dev/null; then
-        local usage_times
-        usage_times=$(calculate_usage_time "$font")
-        local usage_seconds=$(echo "$usage_times" | jq -r --arg font "$font" '.[$font] // 0')
-        local usage_time="not used"
-        if [[ "$usage_seconds" -gt 0 ]] && type -t format_duration &>/dev/null; then
-          usage_time=$(format_duration "$usage_seconds")
-        fi
-      fi
-
-      if [[ "$format" == "full" ]]; then
-        echo "Stats:"
-        printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
-        [[ -n "$usage_time" ]] && printf "  Usage time: %s\n" "$usage_time"
-        printf "  Notes: %d\n" "$notes"
-        printf "  Times applied: %d\n" "$applies"
-        printf "  Platforms: %s\n" "$platforms"
-        local machines=$(echo "$stats" | jq -r '.machines | join(", ") // "unknown"')
-        printf "  Machines: %s\n" "$machines"
-
-        # Show terminal context from last apply
-        if type -t get_last_terminal_context &>/dev/null; then
-          local ctx
-          ctx=$(get_last_terminal_context "$font" 2>/dev/null)
-          if [[ -n "$ctx" ]] && [[ "$ctx" != "{}" ]] && [[ "$ctx" != "null" ]]; then
-            local terminal=$(echo "$ctx" | jq -r '.terminal // "unknown"')
-            local in_tmux=$(echo "$ctx" | jq -r '.in_tmux // "unknown"')
-            local cols=$(echo "$ctx" | jq -r '.cols // "unknown"')
-            local rows=$(echo "$ctx" | jq -r '.rows // "unknown"')
-            local resolution=$(echo "$ctx" | jq -r '.resolution // "unknown"')
-            local font_size=$(echo "$ctx" | jq -r '.font_size // "unknown"')
-
-            echo ""
-            echo "Last Session:"
-            printf "  Terminal: %s\n" "$terminal"
-            [[ "$cols" != "null" && "$cols" != "unknown" ]] && printf "  Size: %sx%s (cols x rows)\n" "$cols" "$rows"
-            [[ "$font_size" != "null" && "$font_size" != "unknown" ]] && printf "  Font size: %s\n" "$font_size"
-            [[ "$resolution" != "null" && "$resolution" != "unknown" ]] && printf "  Resolution: %s\n" "$resolution"
-            [[ "$in_tmux" != "null" ]] && printf "  In tmux: %s\n" "$in_tmux"
-          fi
-        fi
-
-        # Show history for this font (tells the story)
-        if type -t get_history &>/dev/null; then
-          local history_count
-          history_count=$(get_history | jq --arg font "$font" '[.[] | select(.font == $font)] | length')
-          if [[ "$history_count" -gt 0 ]]; then
-            echo ""
-            echo "History:"
-            get_history | jq -r --arg font "$font" '
-              map(select(.font == $font)) |
-              sort_by(.ts) |
-              .[] |
-              .action as $act |
-              .ts[0:10] as $date |
-              .message as $msg |
-              if $act == "apply" then
-                "  \($date)  applied"
-              elif $act == "like" then
-                if $msg then "  \($date)  liked: \($msg)" else "  \($date)  liked" end
-              elif $act == "dislike" then
-                if $msg then "  \($date)  disliked: \($msg)" else "  \($date)  disliked" end
-              elif $act == "note" then
-                "  \($date)  note: \($msg)"
-              elif $act == "reject" then
-                "  \($date)  rejected: \($msg)"
-              elif $act == "unreject" then
-                "  \($date)  unrejected"
-              else
-                "  \($date)  \($act)"
-              end
-            ' 2>/dev/null
-          fi
-        fi
-      else
-        # Compact format for the change picker
-        printf "Score: %+d (%d↑ %d↓)" "$score" "$likes" "$dislikes"
-        [[ -n "$usage_time" ]] && printf " | Used: %s" "$usage_time"
-        echo ""
-      fi
-    fi
-  fi
-
-  # Get font description/info
-  local font_info
-  font_info=$(get_font_info "$font")
-
-  if [[ -n "$font_info" ]] && [[ "$font_info" != "{}" ]]; then
-    local description=$(echo "$font_info" | jq -r '.description // empty')
-    local known_for=$(echo "$font_info" | jq -r '.known_for // empty')
-    local creator=$(echo "$font_info" | jq -r '.creator // empty')
-    local year=$(echo "$font_info" | jq -r '.year // empty')
-    local url=$(echo "$font_info" | jq -r '.url // empty')
-
-    if [[ -n "$description" ]]; then
-      if [[ "$format" == "full" ]]; then
-        echo ""
-        echo "About:"
-        echo "  $description"
-        [[ -n "$known_for" ]] && echo "  Known for: $known_for"
-        [[ -n "$creator" ]] && echo "  Creator: $creator"
-        [[ -n "$year" ]] && echo "  Year: $year"
-        [[ -n "$url" ]] && echo "  URL: $url"
-      else
-        # Compact format for the change picker
-        echo "$description"
-        [[ -n "$known_for" ]] && echo "Known for: $known_for"
-        [[ -n "$creator" ]] && echo "Creator: $creator ($year)"
-      fi
-    fi
-  fi
+  _render_font_about "$font" "$format"
+  _render_font_history "$font" "$history_limit"
+  _render_font_stat_footer "$font" "$format"
 
   if [[ "$format" == "full" ]]; then
     echo ""
