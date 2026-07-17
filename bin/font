@@ -46,21 +46,21 @@ usage() {
 
     print_section "Commands" "blue"
     cat <<'EOF'
-  current              Show currently active font
+  current              Show active font with full stats
   info                 Browse fonts and view detailed history
   change               Interactive font picker (shows per-font stats)
-  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  apply <font>         Apply font to all terminals (auto-logs)
   size-up              Increase font size by 1
   size-down            Decrease font size by 1
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
-  random               Apply random font from all available fonts
+  random               Apply a least-used font (spreads coverage)
   last                 Toggle to previously used font
   rank                 Show fonts ranked by likes and by hours used
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
-  list                 List all available font families
+  list                 List all curated font families
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
@@ -115,21 +115,21 @@ EOF
 
 Commands
 ─────────────────────────
-  current              Show currently active font
+  current              Show active font with full stats
   info                 Browse fonts and view detailed history
   change               Interactive font picker (shows per-font stats)
-  apply <font>         Apply font to Ghostty/Neovim (auto-logs)
+  apply <font>         Apply font to all terminals (auto-logs)
   size-up              Increase font size by 1
   size-down            Decrease font size by 1
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
-  random               Apply random font from all available fonts
+  random               Apply a least-used font (spreads coverage)
   last                 Toggle to previously used font
   rank                 Show fonts ranked by likes and by hours used
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
-  list                 List all available font families
+  list                 List all curated font families
   reject <message>     Mark current font as rejected (avoids rediscovery)
   rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
@@ -139,6 +139,8 @@ Commands
   sync pull            Force pull from gist
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
+  install              Install curated fonts from GitHub Release
+  install --check      Show which curated fonts are missing
   upgrade              Update font to latest release
 
 Examples
