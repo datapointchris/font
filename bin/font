@@ -48,7 +48,7 @@ usage() {
     cat <<'EOF'
   current              Show currently active font
   info                 Browse fonts and view detailed history
-  change               Interactive font picker with previews
+  change               Interactive font picker (shows per-font stats)
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
   size-up              Increase font size by 1
   size-down            Decrease font size by 1
@@ -72,8 +72,6 @@ usage() {
   install              Install curated fonts from GitHub Release
   install --check      Show which curated fonts are missing
   upgrade              Update font to latest release
-  generate-previews    Pre-generate all preview images
-  clear-cache          Clear preview cache
 EOF
 
     print_section "Examples" "yellow"
@@ -102,7 +100,6 @@ EOF
     print_section "Data Storage" "green"
     cat <<'EOF'
   History: ~/.local/state/font/history.jsonl
-  Cache:   ~/.cache/font/previews/
 
   Single history file with terminal context, synced across machines.
   View details: font log
@@ -119,7 +116,7 @@ Commands
 ─────────────────────────
   current              Show currently active font
   info                 Browse fonts and view detailed history
-  change               Interactive font picker with previews
+  change               Interactive font picker (shows per-font stats)
   apply <font>         Apply font to Ghostty/Neovim (auto-logs)
   size-up              Increase font size by 1
   size-down            Decrease font size by 1
@@ -141,8 +138,6 @@ Commands
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
   upgrade              Update font to latest release
-  generate-previews    Pre-generate all preview images
-  clear-cache          Clear preview cache
 
 Examples
 ─────────────────────────
@@ -158,7 +153,6 @@ Examples
 Data Storage
 ─────────────────────────
   History: ~/.local/state/font/history.jsonl
-  Cache:   ~/.cache/font/previews/
 
   Single history file with terminal context, synced across machines.
   View details: font log
@@ -684,85 +678,27 @@ change_font() {
     exit 1
   fi
 
-  if ! command -v magick &>/dev/null; then
-    echo "Error: ImageMagick not found. Install with: brew install imagemagick"
-    exit 1
-  fi
-
   # Pull latest history before showing picker
   sync_before_read
 
-  # Check for image display tool
-  if ! command -v chafa &>/dev/null && ! command -v viu &>/dev/null; then
-    echo "Note: Install 'chafa' or 'viu' for image preview support"
-    echo "  brew install chafa"
-    echo ""
-    echo "Continuing with text-based preview..."
-    sleep 2
-  fi
-
-  # Create cache directory
-  mkdir -p "$PREVIEW_CACHE_DIR"
-
-  # Create a simple preview script
-  local preview_script="/tmp/font-fzf-preview-$$.sh"
-  local preview_log="/tmp/font-preview-debug.log"
+  # Preview script shows each font's stats and info in the fzf window
+  local preview_script="/tmp/font-change-preview-$$.sh"
   cat > "$preview_script" <<PREVIEW_EOF
 #!/bin/bash
-# Debug: Log to file
-exec 2>>"$preview_log"
-echo "=== Preview for: \$1 ===" >>"$preview_log"
-echo "FONT_APP_DIR: $FONT_APP_DIR" >>"$preview_log"
-
-# Load library functions
-if ! source "$FONT_APP_DIR/lib/lib.sh" 2>>"$preview_log"; then
-  echo "ERROR: Failed to source $FONT_APP_DIR/lib/lib.sh"
-  echo "Check $preview_log for details"
-  exit 1
-fi
-
-font="\$1"
-
-# Get or generate preview
-if [[ -n "\${TMUX:-}" ]]; then
-  # Graphics preview doesn't work in tmux - show text details only
-  display_font_details "\$font" "compact"
-  echo ""
-  echo "Graphics preview not available in tmux."
-  echo "Open a regular terminal window to see font preview."
-elif preview_file=\$(get_or_generate_preview "\$font" 2>>"$preview_log"); then
-  echo "Preview file: \$preview_file" >>"$preview_log"
-  # Display font details at the top
-  display_font_details "\$font" "compact"
-  # Add blank lines to push graphics down (so they don't overlap the text)
-  echo ""
-  echo ""
-  echo ""
-  # Display graphics preview below the text
-  if command -v chafa &>/dev/null; then
-    chafa -f kitty --speed 10 --dither none "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
-  elif command -v viu &>/dev/null; then
-    viu -w 80 "\$preview_file" 2>>"$preview_log" || echo "Preview: \$font"
-  else
-    echo "(Install chafa or viu for image preview)"
-  fi
-else
-  echo "Failed to generate preview"
-  echo "Check $preview_log for details"
-fi
+source "$FONT_APP_DIR/lib/lib.sh"
+source "$FONT_APP_DIR/lib/storage.sh"
+display_font_details "\$1" "compact"
 PREVIEW_EOF
 
   chmod +x "$preview_script"
 
-  # Run fzf
   local selected
   selected=$(list_fonts | fzf \
     --prompt="Select font > " \
     --height=100% \
     --preview="$preview_script {}" \
-    --preview-window=right:80%)
+    --preview-window=right:55%)
 
-  # Cleanup
   rm -f "$preview_script"
 
   if [[ -n "$selected" ]]; then
@@ -845,41 +781,6 @@ random_font() {
   echo "   (${#least_used[@]} fonts with $min_count applies)"
   echo ""
   apply_font_cmd "$selected_font"
-}
-
-generate_all_previews() {
-  echo "Pre-generating all font previews..."
-  echo "This will take a few minutes but makes browsing instant."
-  echo ""
-
-  mkdir -p "$PREVIEW_CACHE_DIR"
-
-  local total=$(list_fonts | wc -l | xargs)
-  local current=0
-
-  while IFS= read -r font; do
-    current=$((current + 1))
-    printf "[%d/%d] Generating preview for: %s\n" "$current" "$total" "$font"
-
-    local cache_file=$(get_cached_preview_path "$font")
-
-    # Skip if already exists and is valid
-    if [[ -f "$cache_file" ]] && validate_preview_image "$cache_file" &>/dev/null; then
-      echo "  ✓ Already exists"
-      continue
-    fi
-
-    if generate_font_preview "$font" "$cache_file" 2>/dev/null; then
-      echo "  ✓ Generated"
-    else
-      echo "  ✗ Failed"
-    fi
-  done < <(list_fonts)
-
-  echo ""
-  echo "✓ All previews generated!"
-  echo "  Cache location: $PREVIEW_CACHE_DIR"
-  echo "  Run 'font preview' for instant browsing"
 }
 
 # ==============================================================================
@@ -1163,12 +1064,6 @@ main() {
       ;;
     install)
       install_fonts "${2:-}"
-      ;;
-    generate-previews)
-      generate_all_previews
-      ;;
-    clear-cache)
-      clear_preview_cache
       ;;
     upgrade|update)
       local before_version latest_tag

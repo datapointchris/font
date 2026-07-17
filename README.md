@@ -1,10 +1,10 @@
 # font
 
-Font testing and management with data-driven rankings. Every time you apply, like, dislike, or note a font, it is logged — and rankings emerge from your actual usage rather than opinion. Applies fonts to Ghostty and Neovim in one step, with an interactive picker that previews each font as an image.
+Font testing and management with data-driven rankings. Every time you apply, like, dislike, or note a font, it is logged — and rankings emerge from your actual usage rather than opinion. Applies fonts to Ghostty and Neovim in one step, with an interactive picker that shows each font's stats and history as you browse.
 
 ## Features
 
-- **Interactive picker** with inline image previews (`fzf` + terminal image protocol)
+- **Interactive picker** showing per-font stats, history, and metadata (`fzf`)
 - **Usage tracking**: like / dislike / note / reject, logged per platform
 - **Data-driven rankings** aggregated across all your machines
 - **Cross-machine sync** via GitHub Gist
@@ -31,7 +31,6 @@ ln -sf ~/.local/share/font/bin/font ~/.local/bin/font
 - `jq` — JSON history/ranking processing
 - `fzf` — interactive picker
 - `gh` — GitHub CLI (sync feature and curated-font install)
-- An image previewer — one of `kitty`, `chafa`, `viu`, or ImageMagick (`magick`)
 
 ## Usage
 
@@ -48,7 +47,7 @@ font log                  # Complete history with file locations
 ### Applying
 
 ```bash
-font change               # Interactive picker with image previews
+font change               # Interactive picker (shows per-font stats)
 font apply <font>         # Apply a font by name (auto-logs)
 font random               # Apply a random font
 font last                 # Toggle back to the previous font
@@ -83,8 +82,6 @@ font sync on | off        # Enable / disable auto-sync
 font install              # Install curated fonts from the GitHub Release
 font install --check      # Show which curated fonts are missing
 font upgrade              # Update font to the latest release
-font generate-previews    # Pre-generate all preview images for instant browsing
-font clear-cache          # Clear the preview image cache
 ```
 
 ## How it works
