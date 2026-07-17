@@ -134,6 +134,54 @@ format_relative() {
   fi
 }
 
+# YYYY-MM for the month N months before the current one. Anchored to the first
+# of the month so day-of-month overflow can't skip a month. Handles both BSD
+# (macOS) and GNU date.
+_month_key_offset() {
+  local n="$1"
+
+  if date -v1d +%Y-%m >/dev/null 2>&1; then
+    date -v1d -v-"${n}"m +%Y-%m
+  else
+    date -d "$(date +%Y-%m-01) -${n} month" +%Y-%m
+  fi
+}
+
+# Render a trailing-12-month usage sparkline from a {YYYY-MM: seconds} map.
+# Prints nothing when the map has no usage. $2 is an optional line prefix.
+_render_sparkline() {
+  local map="$1"
+  local prefix="${2:-usage }"
+  local months=12
+
+  local -a values=()
+  local i m val
+  for ((i = months - 1; i >= 0; i--)); do
+    m=$(_month_key_offset "$i")
+    val=$(echo "$map" | jq -r --arg m "$m" '.[$m] // 0')
+    values+=("$val")
+  done
+
+  local max=0 total=0 v
+  for v in "${values[@]}"; do
+    [[ "$v" -gt "$max" ]] && max=$v
+    total=$((total + v))
+  done
+  [[ "$total" -le 0 ]] && return 0
+
+  local ramp=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+  local spark=""
+  for v in "${values[@]}"; do
+    if [[ "$v" -le 0 ]]; then
+      spark+="▁"
+    else
+      local idx=$((v * 7 / max))
+      spark+="${ramp[$idx]}"
+    fi
+  done
+  printf "%s%s (12mo)\n" "$prefix" "$spark"
+}
+
 # ==============================================================================
 # FONT INFO DISPLAY
 # ==============================================================================
@@ -278,6 +326,13 @@ _render_font_stat_footer() {
     fi
   fi
 
+  # Trailing-12-month usage map for the sparkline.
+  local monthly_map="{}"
+  if type -t get_font_monthly_usage_map &>/dev/null; then
+    monthly_map=$(get_font_monthly_usage_map "$font" 2>/dev/null)
+    [[ -z "$monthly_map" ]] && monthly_map="{}"
+  fi
+
   echo ""
   if [[ "$format" == "full" ]]; then
     echo "Stats:"
@@ -288,6 +343,7 @@ _render_font_stat_footer() {
     fi
     [[ -n "$recency" ]] && printf "  Last used: %s\n" "$recency"
     _render_rank_line "  Rank: " "$likes_pos" "$hours_pos" "$rank_total"
+    _render_sparkline "$monthly_map" "  Usage trend: "
     printf "  Notes: %d\n" "$notes"
     printf "  Times applied: %d\n" "$applies"
     printf "  Platforms: %s\n" "$platforms"
@@ -328,6 +384,7 @@ _render_font_stat_footer() {
 
     _render_rank_line "rank: " "$likes_pos" "$hours_pos" "$rank_total"
     _render_context_line "$ctx_machine" "$ctx_terminal" "$ctx_size"
+    _render_sparkline "$monthly_map"
   fi
 }
 

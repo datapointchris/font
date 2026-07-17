@@ -244,6 +244,39 @@ get_font_context_mode() {
   '
 }
 
+# Usage seconds bucketed by calendar month (YYYY-MM), for one font. Each apply's
+# duration is attributed to the month it started in. Returns a JSON object like
+# {"2026-01": 3600, "2026-03": 7200}. Feeds the preview's monthly sparkline.
+get_font_monthly_usage_map() {
+  local font="$1"
+  local current_font
+  current_font=$(get_current_font 2>/dev/null || echo "")
+
+  get_history | jq -c --arg font "$font" --arg current "$current_font" '
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        fromdateiso8601
+      end;
+
+    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
+    ($applies | length) as $n |
+
+    [range(0; $n) as $i |
+      $applies[$i] as $a |
+      (if $i < ($n - 1) then (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))
+       elif $a.font == $current then ((now | floor) - ($a.ts | parse_ts))
+       else null end) as $dur |
+      if $dur == null then empty else {font: $a.font, month: $a.ts[0:7], dur: $dur} end
+    ]
+    | map(select(.font == $font))
+    | group_by(.month)
+    | map({key: .[0].month, value: (map(.dur) | add)})
+    | from_entries
+  '
+}
+
 # A font's 1-based position in each ranking (registry-managed fonts only), plus
 # the total ranked. Positions are null when the font is not in the ranked set.
 get_font_rank_positions() {

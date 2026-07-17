@@ -375,6 +375,16 @@ test_font_stats() {
     test_fail "Context mode size was '$mode_size' (expected '14')"
   fi
 
+  # The monthly usage buckets must sum to the same total as usage_seconds —
+  # every second of usage is attributed to exactly one month.
+  local map_sum
+  map_sum=$(get_font_monthly_usage_map "A" | jq '[.[]] | add // 0')
+  if [[ "$map_sum" -eq "$usage" ]]; then
+    test_pass "Monthly usage buckets sum to total usage ($usage)"
+  else
+    test_fail "Monthly buckets summed to $map_sum (expected $usage)"
+  fi
+
   rm -rf "$test_dir"
   FONT_HISTORY_FILE="$orig_history"
   FONT_STATE_DIR="$orig_state_dir"
