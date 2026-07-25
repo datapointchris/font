@@ -46,7 +46,7 @@ repos:
     hooks:
       - id: prepare-commit-msg
         name: Strip AI branding from commits
-        entry: /Users/chris/.claude/hooks/prepare-commit-msg
+        entry: bash -c 'exec "$HOME/.claude/hooks/prepare-commit-msg" "$@"' --
         language: system
         always_run: true
         stages: [prepare-commit-msg]
