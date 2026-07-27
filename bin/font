@@ -25,6 +25,15 @@ source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
 source "$FONT_APP_DIR/lib/sync.sh"
 
+# Sourced if present rather than required, so an installation predating this
+# dependency still runs every command it ran before. `font update` says how to
+# get it; the notice simply does not appear. Re-running install.sh installs it.
+BASHSELFUPDATE_LOAD="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate/load.bash"
+if [[ -f "$BASHSELFUPDATE_LOAD" ]]; then
+  # shellcheck source=/dev/null
+  source "$BASHSELFUPDATE_LOAD"
+fi
+
 # Get version from git tags (no VERSION file needed)
 get_version() {
   git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null || echo "dev"
@@ -1001,6 +1010,22 @@ install_fonts() {
 # ==============================================================================
 
 main() {
+  # Prints inline to stderr before the command runs, which is the call site the
+  # library documents. Deferring it to an EXIT trap would land it after the
+  # command's output, but install_fonts already sets its own EXIT trap for a
+  # tmpdir, and bash traps are global — composing the two couples the notice to
+  # a cleanup path that will drop it the next time either changes.
+  #
+  # Never fails and never prints an error; `font update` is where update
+  # failures surface. The commands skipped here are the ones a check would be
+  # pointless or harmful in — version is what a script parses.
+  if declare -F bashselfupdate_notify &>/dev/null; then
+    case "${1:-}" in
+      update | upgrade | --version | -v) ;;
+      *) bashselfupdate_notify font "$FONT_APP_DIR" ;;
+    esac
+  fi
+
   case "${1:-}" in
     --version|-v)
       echo "font $(get_version)"
@@ -1123,44 +1148,46 @@ main() {
       install_fonts "${2:-}"
       ;;
     upgrade|update)
-      local before_version latest_tag
-
-      # Get current version
-      before_version=$(git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null)
-
-      # Fetch latest tags from remote
-      if ! git -C "$FONT_APP_DIR" fetch --tags --quiet 2>/dev/null; then
-        echo "✗ font upgrade failed: could not fetch from remote" >&2
+      if ! declare -F bashselfupdate_update &>/dev/null; then
+        echo "✗ font upgrade failed: bashselfupdate is not installed" >&2
+        echo "  Re-run the installer: bash $FONT_APP_DIR/install.sh" >&2
         exit 1
       fi
 
-      # Get latest tag (sorted by version)
-      latest_tag=$(git -C "$FONT_APP_DIR" tag -l 'v*' --sort=-v:refname | head -n1)
-
-      if [[ -z "$latest_tag" ]]; then
-        echo "✗ font upgrade failed: no releases found" >&2
+      # Checked before attempting the update so the far more common cause gets
+      # its own message. bashselfupdate_update returns the same non-zero for a
+      # development checkout, an unreachable remote and a repository with no
+      # releases, and "could not reach the remote" is actively misleading to
+      # someone running font from a clone.
+      if ! bashselfupdate_current_version "$FONT_APP_DIR" >/dev/null 2>&1; then
+        echo "✗ font upgrade failed: $FONT_APP_DIR is not on a release tag ($(bashselfupdate_describe "$FONT_APP_DIR"))" >&2
+        echo "  This is a development checkout. Use git to move it." >&2
         exit 1
       fi
 
-      # Check if already on latest tag
-      if [[ "$before_version" == "$latest_tag" ]]; then
-        echo "✓ font already at latest: $latest_tag"
+      local moved
+      if ! moved=$(bashselfupdate_update "$FONT_APP_DIR"); then
+        echo "✗ font upgrade failed: could not reach the remote or find a release" >&2
+        exit 1
+      fi
+
+      if [[ -z "$moved" ]]; then
+        echo "✓ font already at latest: $(bashselfupdate_describe "$FONT_APP_DIR")"
         exit 0
       fi
 
-      # Checkout the latest tag
-      if ! git -C "$FONT_APP_DIR" checkout --quiet "$latest_tag" 2>/dev/null; then
-        echo "✗ font upgrade failed: could not checkout $latest_tag" >&2
-        exit 1
-      fi
+      local from to
+      read -r from to <<<"$moved"
+      echo "✓ font upgraded: $from → $to"
 
-      echo "✓ font upgraded: $before_version → $latest_tag"
-
-      # Show changes between versions
-      if [[ "$before_version" =~ ^v[0-9] ]]; then
+      local changes
+      changes=$(bashselfupdate_changelog "$FONT_APP_DIR" "$from" "$to")
+      if [[ -n "$changes" ]]; then
         echo ""
         echo "Changes:"
-        git -C "$FONT_APP_DIR" log --format="  • %s" "${before_version}..${latest_tag}" 2>/dev/null || true
+        while IFS= read -r subject; do
+          echo "  • $subject"
+        done <<<"$changes"
       fi
       ;;
     *)

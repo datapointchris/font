@@ -29,13 +29,28 @@ git clone https://github.com/datapointchris/font.git ~/.local/share/font
 ln -sf ~/.local/share/font/bin/font ~/.local/bin/font
 ```
 
-`font upgrade` (or re-running `install.sh`) pulls the latest tagged release.
+`font upgrade` (or re-running `install.sh`) moves the checkout to the latest tagged release.
+
+font also checks once a day and prints one line when a newer release exists:
+
+```text
+font v3.2.0 available (running v3.1.0) — run `font update`
+```
+
+It never installs anything and never prints an error — a failed check is
+recorded and swallowed, because an update notice must not break the command you
+typed. Nothing is printed when either stream is not a terminal, under CI, from a
+checkout that is not sitting on a release tag, or within the interval. Set
+`NO_AUTO_UPDATE` or `FONT_NO_AUTO_UPDATE` to turn it off, and
+`FONT_AUTO_UPDATE_INTERVAL=6h` to change the cadence.
 
 ### Requirements
 
 - `jq` — JSON history/ranking processing
 - `fzf` — interactive picker
 - `git` — version reporting and `font upgrade`
+- [`bashselfupdate`](https://github.com/datapointchris/bashselfupdate) — `font update` and the
+  daily notice; `install.sh` installs it
 - `gh` — GitHub CLI (sync and curated-font install)
 - `bat` *(optional)* — colorizes `font log` output when present
 
