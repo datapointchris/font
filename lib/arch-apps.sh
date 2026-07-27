@@ -95,6 +95,9 @@ EOF
 
 hyprlock_get_font() {
   if [[ -f "$HYPRLOCK_FONTS_FILE" ]]; then
+    # $font here is hyprlock's own variable syntax, written literally by
+    # hyprlock_set_font — single quotes are what keeps it literal.
+    # shellcheck disable=SC2016
     grep '^\$font = ' "$HYPRLOCK_FONTS_FILE" 2>/dev/null | \
       sed 's/^\$font = //' | head -1
   else
