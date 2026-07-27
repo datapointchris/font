@@ -7,7 +7,8 @@ set -euo pipefail
 REPO_URL="${FONT_REPO_URL:-https://github.com/datapointchris/font.git}"
 INSTALL_DIR="${FONT_INSTALL_DIR:-$HOME/.local/share/font}"
 BIN_DIR="${FONT_BIN_DIR:-$HOME/.local/bin}"
-BASHSELFUPDATE_INSTALL_URL="https://raw.githubusercontent.com/datapointchris/bashselfupdate/main/install.sh"
+BASHSELFUPDATE_REPO_URL="${BASHSELFUPDATE_REPO_URL:-https://github.com/datapointchris/bashselfupdate.git}"
+BASHSELFUPDATE_INSTALL_URL="https://github.com/datapointchris/bashselfupdate"
 
 info() { echo "[info] $*"; }
 success() { echo "[ok] $*"; }
@@ -20,15 +21,48 @@ fi
 
 mkdir -p "$BIN_DIR"
 
-# font sources bashselfupdate for `font update` and the daily notice, so the
-# installer has to put it there. Idempotent: its own installer fetches and
-# re-checks-out when the directory already exists.
+# font sources bashselfupdate for `font update` and the daily notice.
+#
+# Cloned with git rather than piped from its install script over curl, because
+# that is the one transport this installer already requires and the two are not
+# equally available: a locked-down network can allow github.com over git while
+# blocking raw.githubusercontent.com, which is exactly why dotfiles keeps a
+# cache of install *scripts*. Adding a second transport would make font
+# uninstallable on a machine where it currently installs fine.
+#
+# Sourced from the fresh clone and then pointed at itself, so the tag comparator
+# lives in one place. `git tag --sort=-v:refname` here would be the sort -V
+# ordering the library exists to replace.
+install_bashselfupdate() {
+  local dir="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate"
+
+  if [[ ! -d "$dir/.git" ]]; then
+    rm -rf "$dir"
+    mkdir -p "$(dirname "$dir")"
+    git clone --quiet "$BASHSELFUPDATE_REPO_URL" "$dir" || return 1
+  fi
+
+  # shellcheck source=/dev/null
+  source "$dir/lib/version.sh"
+  # shellcheck source=/dev/null
+  source "$dir/lib/source.sh"
+  # shellcheck source=/dev/null
+  source "$dir/lib/update.sh"
+
+  bashselfupdate_checkout_latest "$dir" >/dev/null
+}
+
+# Not fatal. font works without it — only `font update` and the daily notice
+# need it, and bin/font degrades to an actionable error and silence
+# respectively. Failing the whole install here would make an unreachable
+# github.com cost the user a working font command for no reason.
 info "Installing bashselfupdate..."
-if ! curl -fsSL "$BASHSELFUPDATE_INSTALL_URL" | bash >/dev/null; then
-  error "Failed to install bashselfupdate (font update depends on it)"
-  exit 1
+if install_bashselfupdate; then
+  success "bashselfupdate installed"
+else
+  error "Could not install bashselfupdate — 'font update' will not work until it is"
+  error "  Install it separately: $BASHSELFUPDATE_INSTALL_URL"
 fi
-success "bashselfupdate installed"
 
 if [[ ! -d "$INSTALL_DIR/.git" ]]; then
   info "Installing font..."
@@ -52,14 +86,23 @@ fi
 # releases is ahead of the newest tag, and update declines a checkout that is not
 # sitting on one. It leaves the checkout on a branch and is idempotent, which is
 # what makes re-running this script mean what everyone assumes it means.
-# shellcheck source=/dev/null
-source "${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate/load.bash"
-
-if ! tag=$(bashselfupdate_checkout_latest "$INSTALL_DIR"); then
-  error "Failed to move font to its latest release"
-  exit 1
+if declare -F bashselfupdate_checkout_latest &>/dev/null; then
+  if ! tag=$(bashselfupdate_checkout_latest "$INSTALL_DIR"); then
+    error "Failed to move font to its latest release"
+    exit 1
+  fi
+  success "font at $tag"
+else
+  # Without the library there is no comparator to pick the newest tag with, so
+  # this tracks the branch instead. Reachable only when bashselfupdate could not
+  # be installed above, which is also a machine where `font update` was never
+  # able to leave a detached HEAD — so pull still works here.
+  if ! git -C "$INSTALL_DIR" pull --quiet; then
+    error "Failed to update font"
+    exit 1
+  fi
+  success "font updated from $(git -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD)"
 fi
-success "font at $tag"
 
 ln -sf "$INSTALL_DIR/bin/font" "$BIN_DIR/font"
 success "font installed: $BIN_DIR/font"
