@@ -31,7 +31,7 @@ families=(
 )
 
 for family in "${families[@]}"; do
-  files=("$FONTS_SRC"/${family}-*.ttf "$FONTS_SRC"/${family}-*.otf "$FONTS_SRC"/${family}Mono-*.ttf "$FONTS_SRC"/${family}Mono-*.otf)
+  files=("$FONTS_SRC/$family"-*.ttf "$FONTS_SRC/$family"-*.otf "$FONTS_SRC/${family}Mono"-*.ttf "$FONTS_SRC/${family}Mono"-*.otf)
   count=0
   for f in "${files[@]}"; do
     if [[ -f "$f" ]]; then
@@ -273,7 +273,7 @@ echo ""
 echo "Step 6: Creating archive..."
 
 cd "$STAGING"
-tar cf - *.ttf *.otf 2>/dev/null | xz -9 > "$OUTPUT"
+tar cf - -- *.ttf *.otf 2>/dev/null | xz -9 > "$OUTPUT"
 
 size=$(du -h "$OUTPUT" | cut -f1)
 echo "  Archive: $OUTPUT ($size)"
