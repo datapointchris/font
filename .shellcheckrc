@@ -1,3 +1,8 @@
+# Follow relative `source` targets rather than reporting SC1091 for each one.
+# This makes shellcheck check more, unlike disabling the code, which hides it.
 external-sources=true
 
-disable=SC2155,SC1091,SC1090
+# Resolve a `source=` directive against the sourcing file, not the working
+# directory, so a nested script can name ../lib/x.sh and lint the same from
+# any working directory.
+source-path=SCRIPTDIR

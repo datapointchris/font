@@ -14,9 +14,13 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source formatting library for colorized help
+# Both paths are outside this repo and already guarded by -f, so shellcheck is
+# told to treat them as empty rather than reporting an unfollowable source.
 if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
+  # shellcheck source=/dev/null
   source "$HOME/.local/shell/formatting.sh"
 elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
+  # shellcheck source=/dev/null
   source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
 fi
 
@@ -317,10 +321,11 @@ show_rejected() {
   local count=0
   while IFS= read -r line; do
     count=$((count + 1))
-    local font=$(echo "$line" | jq -r '.font')
-    local rejected_date=$(echo "$line" | jq -r '.rejected_date')
-    local reason=$(echo "$line" | jq -r '.reason')
-    local platforms=$(echo "$line" | jq -r '.platforms')
+    local font rejected_date reason platforms
+    font=$(echo "$line" | jq -r '.font')
+    rejected_date=$(echo "$line" | jq -r '.rejected_date')
+    reason=$(echo "$line" | jq -r '.reason')
+    platforms=$(echo "$line" | jq -r '.platforms')
 
     # Format date
     local date_formatted
@@ -709,8 +714,9 @@ show_log() {
   # Show data file info
   echo "Data file: $FONT_HISTORY_FILE"
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    local entry_count=$(wc -l <"$FONT_HISTORY_FILE" | xargs)
-    local rejected_count=$(jq -s 'map(select(.action == "reject")) | length' "$FONT_HISTORY_FILE")
+    local entry_count rejected_count
+    entry_count=$(wc -l <"$FONT_HISTORY_FILE" | xargs)
+    rejected_count=$(jq -s 'map(select(.action == "reject")) | length' "$FONT_HISTORY_FILE")
     printf "  Entries: %d\n" "$entry_count"
     printf "  Rejected fonts: %d\n" "$rejected_count"
   fi
