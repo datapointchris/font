@@ -34,7 +34,7 @@ emit() { # ts font action machine platform terminal size [message]
       terminal: $terminal, machine: $machine, platform: $platform,
       in_tmux: true, cols: 120, rows: 40, resolution: "3840x2160",
       font_size: $size, ts: $ts, font: $font, action: $action
-    } + (if $msg == "" then {} else {message: $msg} end)' >> "$HISTORY"
+    } + (if $msg == "" then {} else {message: $msg} end)' >>"$HISTORY"
 }
 
 # seed_applies font machine platform terminal size  month:count ...
@@ -69,11 +69,14 @@ rate() {
 assert_managed() {
   local font="$1"
   jq -e --arg f "$font" '.[$f].managed == true' "$REGISTRY" >/dev/null \
-    || { echo "Not a managed font: $font" >&2; exit 1; }
+    || {
+      echo "Not a managed font: $font" >&2
+      exit 1
+    }
 }
 
 mkdir -p "$DATA_DIR"
-: > "$HISTORY"
+: >"$HISTORY"
 
 # Fira Code — the heavily-used, well-liked favorite. Applied across many months.
 assert_managed "Fira Code Nerd Font"
@@ -130,7 +133,7 @@ emit "2026-04-20T12:00:00Z" "Comic Shanns Mono Nerd Font" reject macmini macos g
 
 # Sort chronologically (history is otherwise append-order; readers sort anyway).
 tmp="$(mktemp)"
-jq -s -c 'sort_by(.ts) | .[]' "$HISTORY" > "$tmp"
+jq -s -c 'sort_by(.ts) | .[]' "$HISTORY" >"$tmp"
 mv "$tmp" "$HISTORY"
 
-echo "Seeded $(wc -l < "$HISTORY" | tr -d ' ') records to $HISTORY"
+echo "Seeded $(wc -l <"$HISTORY" | tr -d ' ') records to $HISTORY"

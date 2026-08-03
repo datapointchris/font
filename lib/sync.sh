@@ -30,8 +30,8 @@ _sync_check_gh() {
 # Check if sync is enabled (disabled in dev mode)
 is_sync_enabled() {
   _is_dev_mode && return 1
-  [[ -f "$FONT_SYNC_STATE_FILE" ]] && \
-    jq -e '.enabled == true' "$FONT_SYNC_STATE_FILE" &>/dev/null
+  [[ -f "$FONT_SYNC_STATE_FILE" ]] \
+    && jq -e '.enabled == true' "$FONT_SYNC_STATE_FILE" &>/dev/null
 }
 
 # Get gist ID from state
@@ -56,15 +56,15 @@ _sync_update_state() {
     --arg last_sync "$timestamp" \
     --argjson enabled "$enabled" \
     '{gist_id: $gist_id, last_sync: $last_sync, enabled: $enabled}' \
-    > "$FONT_SYNC_STATE_FILE"
+    >"$FONT_SYNC_STATE_FILE"
 }
 
 # Find existing gist by description
 _sync_find_gist() {
-  gh gist list --limit 100 2>/dev/null | \
-    grep -F "$FONT_GIST_DESCRIPTION" | \
-    head -1 | \
-    awk '{print $1}' || true
+  gh gist list --limit 100 2>/dev/null \
+    | grep -F "$FONT_GIST_DESCRIPTION" \
+    | head -1 \
+    | awk '{print $1}' || true
 }
 
 # Create new gist with initial history
@@ -72,7 +72,7 @@ _sync_create_gist() {
   local history_file="$FONT_HISTORY_FILE"
 
   if [[ ! -f "$history_file" ]] || [[ ! -s "$history_file" ]]; then
-    echo "{}" > /tmp/font-history-init.jsonl
+    echo "{}" >/tmp/font-history-init.jsonl
     history_file="/tmp/font-history-init.jsonl"
   fi
 
@@ -189,7 +189,7 @@ sync_pull() {
 
   # Write merged result
   if [[ -n "$merged" ]]; then
-    echo "$merged" > "$FONT_HISTORY_FILE"
+    echo "$merged" >"$FONT_HISTORY_FILE"
   fi
 
   # Update last sync time
@@ -198,7 +198,7 @@ sync_pull() {
     timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     local state
     state=$(cat "$FONT_SYNC_STATE_FILE")
-    echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' > "$FONT_SYNC_STATE_FILE"
+    echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' >"$FONT_SYNC_STATE_FILE"
   fi
 
   return 0
@@ -232,7 +232,7 @@ sync_push() {
       timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
       local state
       state=$(cat "$FONT_SYNC_STATE_FILE")
-      echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' > "$FONT_SYNC_STATE_FILE"
+      echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' >"$FONT_SYNC_STATE_FILE"
     fi
     return 0
   else
@@ -295,7 +295,7 @@ sync_status() {
   # Show local history stats
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
     local entry_count
-    entry_count=$(wc -l < "$FONT_HISTORY_FILE" | xargs)
+    entry_count=$(wc -l <"$FONT_HISTORY_FILE" | xargs)
     echo "Local entries: $entry_count"
   fi
 }
@@ -305,7 +305,7 @@ sync_off() {
   if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
     local state
     state=$(cat "$FONT_SYNC_STATE_FILE")
-    echo "$state" | jq '.enabled = false' > "$FONT_SYNC_STATE_FILE"
+    echo "$state" | jq '.enabled = false' >"$FONT_SYNC_STATE_FILE"
     echo "✓ Sync disabled"
     echo ""
     echo "Run 'font sync init' to re-enable."
@@ -319,7 +319,7 @@ sync_on() {
   if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
     local state
     state=$(cat "$FONT_SYNC_STATE_FILE")
-    echo "$state" | jq '.enabled = true' > "$FONT_SYNC_STATE_FILE"
+    echo "$state" | jq '.enabled = true' >"$FONT_SYNC_STATE_FILE"
     echo "✓ Sync enabled"
 
     # Do an immediate sync

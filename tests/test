@@ -169,7 +169,7 @@ test_rejection_logic() {
   FONT_STATE_DIR="$test_dir"
 
   # Start with empty history
-  : > "$test_history"
+  : >"$test_history"
 
   local test_font="TestFont-$$"
 
@@ -221,7 +221,7 @@ test_rejection_logic() {
   # Simulate sync rewriting history
   local rewritten
   rewritten=$(jq -s -c 'sort_by(.ts) | .[]' "$test_history")
-  echo "$rewritten" > "$test_history"
+  echo "$rewritten" >"$test_history"
 
   if is_font_rejected "Nimbus Mono PS"; then
     test_pass "Nimbus Mono PS still rejected after sync"
@@ -246,7 +246,7 @@ test_rankings() {
   local orig_state_dir="${FONT_STATE_DIR:-}"
   FONT_HISTORY_FILE="$test_history"
   FONT_STATE_DIR="$test_dir"
-  : > "$test_history"
+  : >"$test_history"
 
   # Two real managed fonts plus one unmanaged font that sorts LAST by score.
   # An unmanaged lowest-scored font is exactly what used to make `font rank`
@@ -265,7 +265,7 @@ test_rankings() {
     echo "{\"ts\":\"2026-01-03T10:00:00Z\",\"font\":\"$managed_a\",\"action\":\"apply\",\"platform\":\"macos\"}"
     echo "{\"ts\":\"2026-01-04T10:00:00Z\",\"font\":\"ZZZ Unmanaged Font\",\"action\":\"apply\",\"platform\":\"macos\"}"
     echo "{\"ts\":\"2026-01-04T11:00:00Z\",\"font\":\"ZZZ Unmanaged Font\",\"action\":\"dislike\",\"platform\":\"macos\"}"
-  } >> "$test_history"
+  } >>"$test_history"
 
   # Replicate the show_rankings filter (managed fonts only), under pipefail.
   local available_json filtered filter_status
@@ -330,7 +330,7 @@ test_font_stats() {
   local orig_state_dir="${FONT_STATE_DIR:-}"
   FONT_HISTORY_FILE="$test_history"
   FONT_STATE_DIR="$test_dir"
-  : > "$test_history"
+  : >"$test_history"
 
   # Font A applied twice back-to-back (one session), then again after B (a
   # second session). Machine m1 dominates (2 of 3 applies), size 14 dominates.
@@ -339,7 +339,7 @@ test_font_stats() {
     echo '{"ts":"2026-01-01T11:00:00Z","font":"A","action":"apply","machine":"m1","font_size":14,"terminal":"ghostty"}'
     echo '{"ts":"2026-01-01T12:00:00Z","font":"B","action":"apply","machine":"m2","font_size":16,"terminal":"kitty"}'
     echo '{"ts":"2026-01-01T13:00:00Z","font":"A","action":"apply","machine":"m2","font_size":16,"terminal":"kitty"}'
-  } >> "$test_history"
+  } >>"$test_history"
 
   local stats
   stats=$(get_font_usage_stats "A")
@@ -401,7 +401,7 @@ test_machine_normalization() {
   local orig_state_dir="${FONT_STATE_DIR:-}"
   FONT_HISTORY_FILE="$test_history"
   FONT_STATE_DIR="$test_dir"
-  : > "$test_history"
+  : >"$test_history"
 
   # Legacy platform-host labels with case and platform drift, plus one already
   # in the new bare-host form, plus two genuinely different WSL machines.
@@ -413,7 +413,7 @@ test_machine_normalization() {
     echo '{"ts":"2026-01-05T10:00:00Z","font":"C","action":"apply","machine":"mbp"}'
     echo '{"ts":"2026-01-06T10:00:00Z","font":"D","action":"apply","machine":"wsl-PF4ZV43G"}'
     echo '{"ts":"2026-01-07T10:00:00Z","font":"E","action":"apply","machine":"wsl-PF5XMXFY"}'
-  } >> "$test_history"
+  } >>"$test_history"
 
   local machines
   machines=$(get_history | jq -c '[.[].machine] | unique')
@@ -450,7 +450,7 @@ test_dashboard() {
   local orig_state_dir="${FONT_STATE_DIR:-}"
   FONT_HISTORY_FILE="$test_history"
   FONT_STATE_DIR="$test_dir"
-  : > "$test_history"
+  : >"$test_history"
 
   # Empty history: overview reports zero fonts, no crash.
   local empty_tried
@@ -468,7 +468,7 @@ test_dashboard() {
     echo '{"ts":"2026-02-10T10:00:00Z","font":"A","action":"apply","machine":"m1"}'
     echo '{"ts":"2026-02-11T10:00:00Z","font":"A","action":"like","machine":"m1"}'
     echo '{"ts":"2026-03-01T10:00:00Z","font":"C","action":"apply","machine":"m1"}'
-  } >> "$test_history"
+  } >>"$test_history"
 
   local tried applies
   tried=$(get_stats_overview | jq -r '.fonts_tried')

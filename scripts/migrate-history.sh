@@ -62,9 +62,9 @@ for history_file in "$OLD_CONFIG_DIR"/history-*.jsonl; do
         font_size: null
       }')
 
-    echo "$migrated" >> "$NEW_STATE_DIR/history.jsonl"
+    echo "$migrated" >>"$NEW_STATE_DIR/history.jsonl"
     HISTORY_COUNT=$((HISTORY_COUNT + 1))
-  done < "$history_file"
+  done <"$history_file"
 done
 
 success "Migrated $HISTORY_COUNT history records"
@@ -93,7 +93,7 @@ for rejected_file in "$OLD_CONFIG_DIR"/rejected-fonts-*.json; do
       resolution: null,
       font_size: null
     }
-  ' "$rejected_file" >> "$NEW_STATE_DIR/history.jsonl"
+  ' "$rejected_file" >>"$NEW_STATE_DIR/history.jsonl"
 
   REJECT_COUNT=$(jq 'keys | length' "$rejected_file")
 done
@@ -102,7 +102,7 @@ success "Converted $REJECT_COUNT rejected fonts to reject actions"
 
 info "Sorting history by timestamp..."
 TEMP_FILE=$(mktemp)
-jq -s 'sort_by(.ts)' "$NEW_STATE_DIR/history.jsonl" | jq -c '.[]' > "$TEMP_FILE"
+jq -s 'sort_by(.ts)' "$NEW_STATE_DIR/history.jsonl" | jq -c '.[]' >"$TEMP_FILE"
 mv "$TEMP_FILE" "$NEW_STATE_DIR/history.jsonl"
 success "History sorted"
 
@@ -125,7 +125,7 @@ echo "  History:  $NEW_STATE_DIR/history.jsonl"
 echo "  Cache:    $NEW_CACHE_DIR/"
 echo ""
 echo "Record counts:"
-TOTAL_RECORDS=$(wc -l < "$NEW_STATE_DIR/history.jsonl" | xargs)
+TOTAL_RECORDS=$(wc -l <"$NEW_STATE_DIR/history.jsonl" | xargs)
 echo "  Total records: $TOTAL_RECORDS"
 echo ""
 echo "Next steps:"

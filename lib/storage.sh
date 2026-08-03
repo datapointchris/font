@@ -95,7 +95,7 @@ log_action() {
       '. + {ts: $ts, font: $font, action: $act}')
   fi
 
-  echo "$record" >> "$FONT_HISTORY_FILE"
+  echo "$record" >>"$FONT_HISTORY_FILE"
 }
 
 get_history() {

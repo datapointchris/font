@@ -66,7 +66,7 @@ windows_terminal_set_font() {
       else . + {font: {face: $font, size: $size}}
       end
     ]
-  ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+  ' "$settings" >"${settings}.tmp" && mv "${settings}.tmp" "$settings"
 }
 
 windows_terminal_set_size() {
@@ -84,7 +84,7 @@ windows_terminal_set_size() {
       else . + {font: {size: $size}}
       end
     ]
-  ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+  ' "$settings" >"${settings}.tmp" && mv "${settings}.tmp" "$settings"
 }
 
 windows_terminal_apply() {

@@ -19,7 +19,7 @@ init_terminal_configs() {
     mkdir -p "$GHOSTTY_CONFIG_DIR"
   fi
   if [[ ! -f "$GHOSTTY_CONFIG_FILE" ]]; then
-    cat > "$GHOSTTY_CONFIG_FILE" << EOF
+    cat >"$GHOSTTY_CONFIG_FILE" <<EOF
 font-family = "monospace"
 font-size = 17
 EOF
@@ -30,7 +30,7 @@ EOF
     mkdir -p "$KITTY_CONFIG_DIR"
   fi
   if [[ ! -f "$KITTY_CONFIG_FILE" ]]; then
-    cat > "$KITTY_CONFIG_FILE" << EOF
+    cat >"$KITTY_CONFIG_FILE" <<EOF
 font_family monospace
 font_size 17.0
 EOF
@@ -73,18 +73,18 @@ get_screen_resolution() {
 
   case "$platform" in
     macos)
-      system_profiler SPDisplaysDataType 2>/dev/null | \
-        grep -o 'Resolution: [0-9]* x [0-9]*' | \
-        head -1 | \
-        sed 's/Resolution: //' | \
-        tr -d ' '
+      system_profiler SPDisplaysDataType 2>/dev/null \
+        | grep -o 'Resolution: [0-9]* x [0-9]*' \
+        | head -1 \
+        | sed 's/Resolution: //' \
+        | tr -d ' '
       ;;
-    archlinux|linux)
+    archlinux | linux)
       xrandr 2>/dev/null | grep '\*' | awk '{print $1}' | head -1
       ;;
     wsl)
-      wmic.exe path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution 2>/dev/null | \
-        awk 'NR==2 {print $1"x"$2}'
+      wmic.exe path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution 2>/dev/null \
+        | awk 'NR==2 {print $1"x"$2}'
       ;;
     *)
       echo ""

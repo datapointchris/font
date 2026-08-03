@@ -178,7 +178,6 @@ EOF
 # FONT OPERATIONS
 # ==============================================================================
 
-
 apply_font_cmd() {
   local font="$1"
 
@@ -369,7 +368,7 @@ unreject_font_interactive() {
 
   # Create preview script that shows font history
   local preview_script="/tmp/font-unreject-preview-$$.sh"
-  cat > "$preview_script" <<'PREVIEW_EOF'
+  cat >"$preview_script" <<'PREVIEW_EOF'
 #!/bin/bash
 font="$1"
 FONT_APP_DIR="$2"
@@ -535,7 +534,7 @@ _render_rank_section() {
     fi
 
     printf "%2d. %-${name_width}s  %b  %b\n" "$rank" "$font" "$metric" "$bar"
-  done <<< "$sorted"
+  done <<<"$sorted"
 }
 
 show_rankings() {
@@ -669,7 +668,7 @@ show_font_info() {
   sync_before_read
 
   local preview_script="/tmp/font-info-preview-$$.sh"
-  cat > "$preview_script" <<PREVIEW_EOF
+  cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
 source "$FONT_APP_DIR/lib/lib.sh"
 source "$FONT_APP_DIR/lib/storage.sh"
@@ -710,7 +709,7 @@ show_log() {
   # Show data file info
   echo "Data file: $FONT_HISTORY_FILE"
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
-    local entry_count=$(wc -l < "$FONT_HISTORY_FILE" | xargs)
+    local entry_count=$(wc -l <"$FONT_HISTORY_FILE" | xargs)
     local rejected_count=$(jq -s 'map(select(.action == "reject")) | length' "$FONT_HISTORY_FILE")
     printf "  Entries: %d\n" "$entry_count"
     printf "  Rejected fonts: %d\n" "$rejected_count"
@@ -746,7 +745,7 @@ change_font() {
 
   # Preview script shows each font's stats and info in the fzf window
   local preview_script="/tmp/font-change-preview-$$.sh"
-  cat > "$preview_script" <<PREVIEW_EOF
+  cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
 source "$FONT_APP_DIR/lib/lib.sh"
 source "$FONT_APP_DIR/lib/storage.sh"
@@ -871,7 +870,7 @@ _get_system_font_dir() {
         echo "$HOME/.local/share/fonts"
       fi
       ;;
-    *)     echo "$HOME/.local/share/fonts" ;;
+    *) echo "$HOME/.local/share/fonts" ;;
   esac
 }
 
@@ -1027,7 +1026,7 @@ main() {
   fi
 
   case "${1:-}" in
-    --version|-v)
+    --version | -v)
       echo "font $(get_version)"
       exit 0
       ;;
@@ -1147,7 +1146,7 @@ main() {
     install)
       install_fonts "${2:-}"
       ;;
-    upgrade|update)
+    upgrade | update)
       if ! declare -F bashselfupdate_update &>/dev/null; then
         echo "✗ font upgrade failed: bashselfupdate is not installed" >&2
         echo "  Re-run the installer: bash $FONT_APP_DIR/install.sh" >&2

@@ -36,7 +36,7 @@ kitty_set_font() {
 
   mkdir -p "$KITTY_CONFIG_DIR"
 
-  cat > "$KITTY_CONFIG_FILE" << EOF
+  cat >"$KITTY_CONFIG_FILE" <<EOF
 font_family ${font}
 font_size ${size}.0
 EOF
@@ -50,7 +50,7 @@ kitty_set_size() {
 
   mkdir -p "$KITTY_CONFIG_DIR"
 
-  cat > "$KITTY_CONFIG_FILE" << EOF
+  cat >"$KITTY_CONFIG_FILE" <<EOF
 font_family ${font}
 font_size ${size}.0
 EOF

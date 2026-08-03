@@ -273,7 +273,7 @@ echo ""
 echo "Step 6: Creating archive..."
 
 cd "$STAGING"
-tar cf - -- *.ttf *.otf 2>/dev/null | xz -9 > "$OUTPUT"
+tar cf - -- *.ttf *.otf 2>/dev/null | xz -9 >"$OUTPUT"
 
 size=$(du -h "$OUTPUT" | cut -f1)
 echo "  Archive: $OUTPUT ($size)"

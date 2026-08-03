@@ -28,7 +28,7 @@ init_arch_configs() {
       mkdir -p "$WAYBAR_FONTS_DIR"
     fi
     if [[ ! -f "$WAYBAR_FONTS_FILE" ]]; then
-      cat > "$WAYBAR_FONTS_FILE" << 'EOF'
+      cat >"$WAYBAR_FONTS_FILE" <<'EOF'
 /* Font configuration - managed by font tool */
 * {
     font-family: "monospace", monospace;
@@ -43,7 +43,7 @@ EOF
       mkdir -p "$HYPRLOCK_FONTS_DIR"
     fi
     if [[ ! -f "$HYPRLOCK_FONTS_FILE" ]]; then
-      cat > "$HYPRLOCK_FONTS_FILE" << 'EOF'
+      cat >"$HYPRLOCK_FONTS_FILE" <<'EOF'
 # Font configuration - managed by font tool
 # Source this in hyprlock.conf: source = ~/.config/hypr/fonts/current.conf
 # Then use: font_family = $font
@@ -58,7 +58,7 @@ EOF
       mkdir -p "$DUNST_DROPIN_DIR"
     fi
     if [[ ! -f "$DUNST_FONTS_FILE" ]]; then
-      cat > "$DUNST_FONTS_FILE" << 'EOF'
+      cat >"$DUNST_FONTS_FILE" <<'EOF'
 # Font configuration - managed by font tool
 # This drop-in overrides font setting from dunstrc
 [global]
@@ -70,8 +70,8 @@ EOF
 
 waybar_get_font() {
   if [[ -f "$WAYBAR_FONTS_FILE" ]]; then
-    grep 'font-family:' "$WAYBAR_FONTS_FILE" 2>/dev/null | \
-      grep -o '"[^"]*"' | head -1 | tr -d '"'
+    grep 'font-family:' "$WAYBAR_FONTS_FILE" 2>/dev/null \
+      | grep -o '"[^"]*"' | head -1 | tr -d '"'
   else
     echo ""
   fi
@@ -82,7 +82,7 @@ waybar_set_font() {
 
   mkdir -p "$WAYBAR_FONTS_DIR"
 
-  cat > "$WAYBAR_FONTS_FILE" << EOF
+  cat >"$WAYBAR_FONTS_FILE" <<EOF
 /* Font configuration - managed by font tool */
 * {
     font-family: "${font}", monospace;
@@ -98,8 +98,8 @@ hyprlock_get_font() {
     # $font here is hyprlock's own variable syntax, written literally by
     # hyprlock_set_font — single quotes are what keeps it literal.
     # shellcheck disable=SC2016
-    grep '^\$font = ' "$HYPRLOCK_FONTS_FILE" 2>/dev/null | \
-      sed 's/^\$font = //' | head -1
+    grep '^\$font = ' "$HYPRLOCK_FONTS_FILE" 2>/dev/null \
+      | sed 's/^\$font = //' | head -1
   else
     echo ""
   fi
@@ -110,7 +110,7 @@ hyprlock_set_font() {
 
   mkdir -p "$HYPRLOCK_FONTS_DIR"
 
-  cat > "$HYPRLOCK_FONTS_FILE" << EOF
+  cat >"$HYPRLOCK_FONTS_FILE" <<EOF
 # Font configuration - managed by font tool
 \$font = ${font}
 EOF
@@ -118,8 +118,8 @@ EOF
 
 dunst_get_font() {
   if [[ -f "$DUNST_FONTS_FILE" ]]; then
-    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null | \
-      sed 's/^font = //;s/ [0-9]*$//' | head -1
+    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null \
+      | sed 's/^font = //;s/ [0-9]*$//' | head -1
   else
     echo ""
   fi
@@ -127,8 +127,8 @@ dunst_get_font() {
 
 dunst_get_size() {
   if [[ -f "$DUNST_FONTS_FILE" ]]; then
-    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null | \
-      grep -o '[0-9]*$' | head -1
+    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null \
+      | grep -o '[0-9]*$' | head -1
   else
     echo "10"
   fi
@@ -142,7 +142,7 @@ dunst_set_font() {
 
   mkdir -p "$DUNST_DROPIN_DIR"
 
-  cat > "$DUNST_FONTS_FILE" << EOF
+  cat >"$DUNST_FONTS_FILE" <<EOF
 # Font configuration - managed by font tool
 [global]
 font = ${font} ${size}

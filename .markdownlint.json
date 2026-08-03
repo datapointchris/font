@@ -2,7 +2,8 @@
   "default": true,
   "MD013": false,
   "MD024": {"siblings_only": true},
-  "MD033": {"allowed_elements": ["br", "platform", "name", "query", "div"]},
+  "MD033": false,
   "MD036": false,
+  "MD038": false,
   "MD046": false
 }
