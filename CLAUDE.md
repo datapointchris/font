@@ -8,6 +8,6 @@
 - To test against **dev data**: just run normally from this directory
 - `.dev-data/` is gitignored. Regenerate a realistic fixture (managed font names, months of history for the sparkline/discovery, both divergence cases, a rejected font) with `scripts/seed-dev-data.sh`
 - The installed prod binary is at `~/.local/bin/font` -> `~/.local/share/font/bin/font`
-- Prod uses git tag checkout (not main), so `font upgrade` only gets tagged releases
+- Prod uses git tag checkout (not main), so `font update` only gets tagged releases
 
 If rank/history/current looks wrong, check which data directory you're hitting first.

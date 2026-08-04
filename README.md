@@ -29,7 +29,7 @@ git clone https://github.com/datapointchris/font.git ~/.local/share/font
 ln -sf ~/.local/share/font/bin/font ~/.local/bin/font
 ```
 
-`font upgrade` (or re-running `install.sh`) moves the checkout to the latest tagged release.
+`font update` (or re-running `install.sh`) moves the checkout to the latest tagged release.
 
 font also checks once a day and prints one line when a newer release exists:
 
@@ -48,7 +48,7 @@ checkout that is not sitting on a release tag, or within the interval. Set
 
 - `jq` — JSON history/ranking processing
 - `fzf` — interactive picker
-- `git` — version reporting and `font upgrade`
+- `git` — version reporting and `font update`
 - [`bashselfupdate`](https://github.com/datapointchris/bashselfupdate) — `font update` and the
   daily notice; `install.sh` installs it
 - `gh` — GitHub CLI (sync and curated-font install)
@@ -108,7 +108,7 @@ font sync on | off        # Enable / disable auto-sync
 ```bash
 font install              # Install curated fonts from the GitHub Release
 font install --check      # Show which curated fonts are missing
-font upgrade              # Update font to the latest release
+font update               # Update font to the latest release
 ```
 
 ## How it works

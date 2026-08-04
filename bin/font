@@ -85,7 +85,7 @@ usage() {
   sync on              Re-enable auto-sync
   install              Install curated fonts from GitHub Release
   install --check      Show which curated fonts are missing
-  upgrade              Update font to latest release
+  update               Update font to latest release
 EOF
 
     print_section "Examples" "yellow"
@@ -154,7 +154,7 @@ Commands
   sync on              Re-enable auto-sync
   install              Install curated fonts from GitHub Release
   install --check      Show which curated fonts are missing
-  upgrade              Update font to latest release
+  update               Update font to latest release
 
 Examples
 ─────────────────────────
@@ -1026,7 +1026,7 @@ main() {
   # pointless or harmful in — version is what a script parses.
   if declare -F bashselfupdate_notify &>/dev/null; then
     case "${1:-}" in
-      update | upgrade | --version | -v) ;;
+      update | --version | -v) ;;
       *) bashselfupdate_notify font "$FONT_APP_DIR" ;;
     esac
   fi
@@ -1152,9 +1152,9 @@ main() {
     install)
       install_fonts "${2:-}"
       ;;
-    upgrade | update)
+    update)
       if ! declare -F bashselfupdate_update &>/dev/null; then
-        echo "✗ font upgrade failed: bashselfupdate is not installed" >&2
+        echo "✗ font update failed: bashselfupdate is not installed" >&2
         echo "  Re-run the installer: bash $FONT_APP_DIR/install.sh" >&2
         exit 1
       fi
@@ -1165,14 +1165,14 @@ main() {
       # releases, and "could not reach the remote" is actively misleading to
       # someone running font from a clone.
       if ! bashselfupdate_current_version "$FONT_APP_DIR" >/dev/null 2>&1; then
-        echo "✗ font upgrade failed: $FONT_APP_DIR is not on a release tag ($(bashselfupdate_describe "$FONT_APP_DIR"))" >&2
+        echo "✗ font update failed: $FONT_APP_DIR is not on a release tag ($(bashselfupdate_describe "$FONT_APP_DIR"))" >&2
         echo "  This is a development checkout. Use git to move it." >&2
         exit 1
       fi
 
       local moved
       if ! moved=$(bashselfupdate_update "$FONT_APP_DIR"); then
-        echo "✗ font upgrade failed: could not reach the remote or find a release" >&2
+        echo "✗ font update failed: could not reach the remote or find a release" >&2
         exit 1
       fi
 
@@ -1183,7 +1183,7 @@ main() {
 
       local from to
       read -r from to <<<"$moved"
-      echo "✓ font upgraded: $from → $to"
+      echo "✓ font updated: $from → $to"
 
       local changes
       changes=$(bashselfupdate_changelog "$FONT_APP_DIR" "$from" "$to")
