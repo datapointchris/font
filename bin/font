@@ -17,10 +17,8 @@ FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Both paths are outside this repo and already guarded by -f, so shellcheck is
 # told to treat them as empty rather than reporting an unfollowable source.
 if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
-  # shellcheck source=/dev/null
   source "$HOME/.local/shell/formatting.sh"
 elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
-  # shellcheck source=/dev/null
   source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
 fi
 
@@ -34,7 +32,6 @@ source "$FONT_APP_DIR/lib/sync.sh"
 # get it; the notice simply does not appear. Re-running install.sh installs it.
 BASHSELFUPDATE_LOAD="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate/load.bash"
 if [[ -f "$BASHSELFUPDATE_LOAD" ]]; then
-  # shellcheck source=/dev/null
   source "$BASHSELFUPDATE_LOAD"
 fi
 

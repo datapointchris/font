@@ -42,11 +42,8 @@ install_bashselfupdate() {
     git clone --quiet "$BASHSELFUPDATE_REPO_URL" "$dir" || return 1
   fi
 
-  # shellcheck source=/dev/null
   source "$dir/lib/version.sh"
-  # shellcheck source=/dev/null
   source "$dir/lib/source.sh"
-  # shellcheck source=/dev/null
   source "$dir/lib/update.sh"
 
   bashselfupdate_checkout_latest "$dir" >/dev/null
