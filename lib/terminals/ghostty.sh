@@ -21,7 +21,7 @@ ghostty_config_path() {
 
 ghostty_get_font() {
   if [[ -f "$GHOSTTY_CONFIG_FILE" ]]; then
-    grep "^font-family" "$GHOSTTY_CONFIG_FILE" 2>/dev/null | cut -d= -f2 | tr -d '"' | xargs
+    font_trim "$(grep "^font-family" "$GHOSTTY_CONFIG_FILE" 2>/dev/null | cut -d= -f2 | tr -d '"')"
   else
     echo ""
   fi
@@ -29,7 +29,7 @@ ghostty_get_font() {
 
 ghostty_get_size() {
   if [[ -f "$GHOSTTY_CONFIG_FILE" ]]; then
-    grep "^font-size" "$GHOSTTY_CONFIG_FILE" 2>/dev/null | cut -d= -f2 | xargs
+    font_trim "$(grep "^font-size" "$GHOSTTY_CONFIG_FILE" 2>/dev/null | cut -d= -f2)"
   else
     echo ""
   fi

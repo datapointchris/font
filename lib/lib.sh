@@ -4,10 +4,29 @@
 
 set -euo pipefail
 
+# terminal.sh sources this for font_trim, and bin/font sources both, so the guard
+# stops the assignments below running twice.
+[[ -n "${_FONT_LIB_SOURCED:-}" ]] && return 0
+_FONT_LIB_SOURCED=1
+
 # Directories and files
 FONT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 FONT_APP_DIR="$(cd "$FONT_LIB_DIR/.." && pwd)"
 CODE_FONTS_DIR="${CODE_FONTS_DIR:-$HOME/Documents/code_fonts}"
+
+# Strip leading and trailing whitespace from a value read out of a config file.
+#
+# Never `| xargs` for this. With no command xargs runs `echo`, so a value
+# starting with a dash is read as echo's own flags: a ghostty font-family of
+# "--help" comes back as "Usage: echo [SHORT-OPTION]... [STRING]...", and that
+# string was written into history as a font name. xargs also strips quotes and
+# backslashes and fails outright on an unmatched quote, so a font file path
+# containing one takes the lookup down.
+font_trim() {
+  local value="$*"
+  value="${value#"${value%%[![:space:]]*}"}"
+  printf '%s' "${value%"${value##*[![:space:]]}"}"
+}
 
 # ==============================================================================
 # CORE FUNCTIONS - Each can be tested independently
@@ -36,7 +55,7 @@ get_font_file_path() {
   # Iosevka Slab - use Medium weight for better visibility (TTC files have family name "Iosevka Slab Medium")
   if [[ "$font_name" =~ "Iosevka".*"Slab" ]]; then
     local medium_family="${font_name} Medium"
-    font_file=$(fc-list : family file style | grep -F "$medium_family" | grep -iE "style=(Medium|Semibold)" | head -1 | cut -d: -f1 | xargs)
+    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$medium_family" | grep -iE "style=(Medium|Semibold)" | head -1 | cut -d: -f1)")
     if [[ -n "$font_file" ]]; then
       echo "$font_file"
       return 0
@@ -45,7 +64,7 @@ get_font_file_path() {
 
   # Nimbus Mono PS - use Bold for better visibility (only has Regular and Bold)
   if [[ "$font_name" == "Nimbus Mono PS" ]]; then
-    font_file=$(fc-list : family file style | grep -F "$font_name" | grep -iE "style=Bold$" | head -1 | cut -d: -f1 | xargs)
+    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=Bold$" | head -1 | cut -d: -f1)")
     if [[ -n "$font_file" ]]; then
       echo "$font_file"
       return 0
@@ -54,16 +73,16 @@ get_font_file_path() {
 
   # Try to get Regular style first (must be primary style, not secondary in TTC)
   # Handles numeric weight prefixes like "400 Regular" or plain "Regular"
-  font_file=$(fc-list : family file style | grep -F "$font_name" | grep -iE "style=([0-9]+ )?(Regular|Normal|Book|Roman)(,|$)" | head -1 | cut -d: -f1 | xargs)
+  font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=([0-9]+ )?(Regular|Normal|Book|Roman)(,|$)" | head -1 | cut -d: -f1)")
 
   # If no Regular variant, fall back to any variant (but skip Bold/Italic if possible)
   if [[ -z "$font_file" ]]; then
-    font_file=$(fc-list : family file style | grep -F "$font_name" | grep -viE "style=(Bold|Italic|Light|Thin|Black|Heavy|Oblique|Slant)" | head -1 | cut -d: -f1 | xargs)
+    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -viE "style=(Bold|Italic|Light|Thin|Black|Heavy|Oblique|Slant)" | head -1 | cut -d: -f1)")
   fi
 
   # If still nothing, just take whatever is available
   if [[ -z "$font_file" ]]; then
-    font_file=$(fc-list : family file | grep -F "$font_name" | head -1 | cut -d: -f1 | xargs)
+    font_file=$(font_trim "$(fc-list : family file | grep -F -- "$font_name" | head -1 | cut -d: -f1)")
   fi
 
   if [[ -z "$font_file" ]] || [[ ! -f "$font_file" ]]; then
@@ -80,7 +99,9 @@ get_font_file_path() {
 get_font_style() {
   local font_name="$1"
 
-  fc-list : family file style | grep -F "$font_name" | grep -iE "style=(Regular|Normal|Book|Medium|Roman)" | head -1 | cut -d: -f3 | sed 's/style=//' | xargs || echo "Unknown"
+  local style
+  style=$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=(Regular|Normal|Book|Medium|Roman)" | head -1 | cut -d: -f3 | sed 's/style=//')
+  font_trim "$style" || echo "Unknown"
 }
 
 # ==============================================================================

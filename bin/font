@@ -49,13 +49,10 @@ list_fonts_not_rejected() {
   done
 }
 
-usage() {
-  # Check if formatting functions are available
-  if command -v print_header &>/dev/null; then
-    print_section "Font Testing & Management" "yellow"
-
-    print_section "Commands" "blue"
-    cat <<'EOF'
+# The one place a verb's synopsis is written. verb_usage greps it, so a verb
+# added here answers --help without a second entry anywhere.
+commands_table() {
+  cat <<'EOF'
   current              Show active font with full stats
   info                 Browse fonts and view detailed history
   change               Interactive font picker (shows per-font stats)
@@ -84,6 +81,35 @@ usage() {
   install --check      Show which curated fonts are missing
   update               Update font to latest release
 EOF
+}
+
+# Answers `font <verb> --help`. Every row whose first word is the verb, so `sync`
+# prints its six and a plain verb prints its one.
+verb_usage() {
+  local verb="$1"
+  local rows
+  rows=$(commands_table | grep -E "^  ${verb}( |\$)" || true)
+
+  if [[ -z "$rows" ]]; then
+    usage
+    return
+  fi
+
+  echo "Usage:"
+  while IFS= read -r row; do
+    echo "  font ${row#  }"
+  done <<<"$rows"
+  echo ""
+  echo "Every command: font help"
+}
+
+usage() {
+  # Check if formatting functions are available
+  if command -v print_header &>/dev/null; then
+    print_section "Font Testing & Management" "yellow"
+
+    print_section "Commands" "blue"
+    commands_table
 
     print_section "Examples" "yellow"
     if command -v print_cyan &>/dev/null; then
@@ -125,33 +151,9 @@ EOF
 
 Commands
 ─────────────────────────
-  current              Show active font with full stats
-  info                 Browse fonts and view detailed history
-  change               Interactive font picker (shows per-font stats)
-  apply <font>         Apply font to all terminals (auto-logs)
-  size-up              Increase font size by 1
-  size-down            Decrease font size by 1
-  like [message]       Like current font with optional reason
-  dislike [message]    Dislike current font with optional reason
-  note <message>       Add note to current font (message required)
-  random               Apply a least-used font (spreads coverage)
-  last                 Toggle to previously used font
-  rank                 Show fonts ranked by likes and by hours used
-  stats                Portfolio dashboard (divergence, discovery, per-machine)
-  log                  View complete history
-  list                 List all curated font families
-  reject <message>     Mark current font as rejected (avoids rediscovery)
-  rejected             List all rejected fonts
-  unreject             Restore a rejected font (fzf picker with history)
-  sync init            Set up cross-machine sync via GitHub Gist
-  sync status          Show sync status
-  sync push            Force push to gist
-  sync pull            Force pull from gist
-  sync off             Disable auto-sync
-  sync on              Re-enable auto-sync
-  install              Install curated fonts from GitHub Release
-  install --check      Show which curated fonts are missing
-  update               Update font to latest release
+EOF
+    commands_table
+    cat <<'EOF'
 
 Examples
 ─────────────────────────
@@ -856,7 +858,7 @@ FONT_RELEASE_TAG="fonts-v1"
 FONT_RELEASE_REPO="datapointchris/font"
 
 _get_windows_username() {
-  cmd.exe /C 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n' | xargs
+  font_trim "$(cmd.exe /C 'echo %USERNAME%' 2>/dev/null | tr -d '\r\n')"
 }
 
 _get_system_font_dir() {
@@ -928,7 +930,7 @@ install_fonts() {
       # Check via fc-list (Linux) or file existence (macOS)
       local found=false
       if command -v fc-list &>/dev/null; then
-        fc-list : family | grep -Fq "$font" && found=true
+        fc-list : family | grep -Fq -- "$font" && found=true
       else
         # macOS: check for font files matching the family name (strip spaces)
         local pattern="${font// /}"
@@ -1028,6 +1030,17 @@ main() {
     esac
   fi
 
+  # Every verb answers --help instead of taking it as its message argument.
+  # `font reject --help` otherwise rejects the current font with "--help" as the
+  # reason, `font like`/`dislike`/`note` write a history record saying the same,
+  # and `font apply --help` reaches a grep that reads the flag as its own.
+  case "${2:-}" in
+    --help | -h)
+      verb_usage "${1:-}"
+      exit 0
+      ;;
+  esac
+
   case "${1:-}" in
     --version | -v)
       echo "font $(get_version)"
@@ -1051,10 +1064,14 @@ main() {
         usage
         exit 1
       fi
-      # Validate font name against installed fonts
+      # Validate font name against installed fonts.
+      #
+      # `--` or the name is read as grep's own flags: `grep -Fxq --help` prints
+      # grep's help and exits 0 on GNU grep, so the check passes and a font named
+      # "--help" gets applied.
       local available_fonts
       available_fonts=$(list_fonts)
-      if ! echo "$available_fonts" | grep -Fxq "$2"; then
+      if ! echo "$available_fonts" | grep -Fxq -- "$2"; then
         echo "Error: Font '$2' not found"
         echo ""
         local suggestions
@@ -1192,8 +1209,14 @@ main() {
         done <<<"$changes"
       fi
       ;;
-    *)
+    "" | help | --help | -h)
       usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown command: $1" >&2
+      echo "" >&2
+      usage >&2
       exit 1
       ;;
   esac

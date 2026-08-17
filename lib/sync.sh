@@ -67,49 +67,97 @@ _sync_find_gist() {
     | awk '{print $1}' || true
 }
 
-# Create new gist with initial history
-_sync_create_gist() {
-  local history_file="$FONT_HISTORY_FILE"
+# The gist holds one file per machine, and a machine writes only its own.
+#
+# A union merge cannot express a deletion: every machine may assert every row, so
+# a row removed here is put back by the next machine to sync from a copy that
+# still holds it. One writer per file makes removing a row you wrote an ordinary
+# edit, and no other machine has standing to undo it.
+_sync_history_filename() {
+  echo "history-$(get_machine_id).jsonl"
+}
 
-  if [[ ! -f "$history_file" ]] || [[ ! -s "$history_file" ]]; then
-    echo "{}" >/tmp/font-history-init.jsonl
-    history_file="/tmp/font-history-init.jsonl"
-  fi
+# The per-machine files, which is deliberately not the pre-split "history.jsonl".
+# A machine on an older release still writes the whole merged set to that name —
+# reading it back would restore the union this replaces.
+_sync_remote_files() {
+  local gist_id="$1"
+
+  gh gist view "$gist_id" --files 2>/dev/null | grep -E '^history-.+\.jsonl$' || true
+}
+
+_sync_fetch_file() {
+  local gist_id="$1"
+  local filename="$2"
+
+  gh gist view "$gist_id" --filename "$filename" --raw 2>/dev/null || true
+}
+
+# This machine's rows, normalized and sorted — what its file in the gist holds.
+_sync_own_records() {
+  local machine_id="$1"
+
+  [[ -f "$FONT_HISTORY_FILE" ]] || return 0
+
+  jq -s -c --arg me "$machine_id" "
+    map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) |
+    map(select(.machine == \$me)) | sort_by(.ts) | .[]
+  " "$FONT_HISTORY_FILE"
+}
+
+# Create new gist seeded with this machine's file
+_sync_create_gist() {
+  local tmpdir seed
+  tmpdir=$(mktemp -d)
+  seed="$tmpdir/$(_sync_history_filename)"
+
+  _sync_own_records "$(get_machine_id)" >"$seed"
+  [[ -s "$seed" ]] || echo "{}" >"$seed"
 
   local gist_url
-  gist_url=$(gh gist create "$history_file" \
-    --desc "$FONT_GIST_DESCRIPTION" \
-    --filename "history.jsonl" 2>/dev/null)
+  gist_url=$(gh gist create "$seed" --desc "$FONT_GIST_DESCRIPTION" 2>/dev/null)
 
   # Extract gist ID from URL
   echo "$gist_url" | grep -oE '[a-f0-9]{32}' | head -1
 
-  rm -f /tmp/font-history-init.jsonl
+  rm -rf "$tmpdir"
 }
 
-# Fetch gist content
-_sync_fetch_gist() {
-  local gist_id="$1"
-
-  gh gist view "$gist_id" --filename "history.jsonl" --raw 2>/dev/null
-}
-
-# Merge two history streams (deduplication by ts+machine+font+action)
+# Every other machine's file as it stands in the gist, plus this machine's own
+# rows from the local file.
+#
+# Taking the remote as authoritative for the others is what lets a deletion made
+# on another machine arrive here. Keeping local for this machine is what lets one
+# made here survive until the next push.
+#
+# The machine normalizer runs on both sides. Ownership is decided by .machine, so
+# a legacy "macos-macmini" record would otherwise belong to no machine at all.
+#
+# Args: <local_file> <machine_id> [remote_content]
 _sync_merge_histories() {
   local local_file="$1"
-  local remote_content="$2"
+  local machine_id="$2"
+  local remote_content="${3:-}"
 
-  # Combine local and remote, dedupe, sort by timestamp
   {
-    [[ -f "$local_file" ]] && cat "$local_file"
-    echo "$remote_content"
-  } | jq -s "
-    flatten |
-    map(select(. != null and . != {} and type == \"object\")) |
-    map($_JQ_NORMALIZE_FONT_NAMES) |
-    unique_by([.ts, .machine, .font, .action]) |
-    sort_by(.ts)
-  " | jq -c '.[]'
+    if [[ -f "$local_file" ]]; then
+      jq -s -c --arg me "$machine_id" "
+        map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) |
+        map(select(.machine == \$me)) | .[]
+      " "$local_file"
+    fi
+
+    if [[ -n "$remote_content" ]]; then
+      printf '%s\n' "$remote_content" | jq -s -c --arg me "$machine_id" "
+        flatten |
+        map(select(. != null and . != {} and type == \"object\")) |
+        map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) |
+        map(select(.machine != \$me)) | .[]
+      "
+    fi
+    # unique_by survives the split. A machine whose id drifts writes a second
+    # file, and both then carry the same rows under one normalized name.
+  } | jq -s -c 'unique_by([.ts, .machine, .font, .action]) | sort_by(.ts) | .[]'
 }
 
 # Initialize sync - set up gist and do initial sync
@@ -171,23 +219,23 @@ sync_pull() {
     return 1
   fi
 
-  # Fetch remote content
-  local remote_content
-  if ! remote_content=$(_sync_fetch_gist "$gist_id" 2>/dev/null); then
-    # Network error - silently continue with local
-    return 0
-  fi
+  local machine_id own_file
+  machine_id=$(get_machine_id)
+  own_file=$(_sync_history_filename)
 
-  # Skip if remote is empty or just "{}"
-  if [[ -z "$remote_content" ]] || [[ "$remote_content" == "{}" ]]; then
-    return 0
-  fi
+  # Every machine's file but this one's. This machine's rows come from local,
+  # which is what lets a row written since the last push survive a pull.
+  local remote_content="" filename
+  while IFS= read -r filename; do
+    [[ -z "$filename" || "$filename" == "$own_file" ]] && continue
+    remote_content+="$(_sync_fetch_file "$gist_id" "$filename")"$'\n'
+  done < <(_sync_remote_files "$gist_id")
 
-  # Merge with local
   local merged
-  merged=$(_sync_merge_histories "$FONT_HISTORY_FILE" "$remote_content")
+  merged=$(_sync_merge_histories "$FONT_HISTORY_FILE" "$machine_id" "$remote_content")
 
-  # Write merged result
+  # An empty merge means every file was unreadable, never that history is empty —
+  # writing it back would erase this machine's own rows.
   if [[ -n "$merged" ]]; then
     echo "$merged" >"$FONT_HISTORY_FILE"
   fi
@@ -224,8 +272,31 @@ sync_push() {
   # First pull to get any remote changes
   sync_pull
 
-  # Push merged history
-  if gh gist edit "$gist_id" --filename "history.jsonl" "$FONT_HISTORY_FILE" &>/dev/null; then
+  local own_file tmpdir slice
+  own_file=$(_sync_history_filename)
+  tmpdir=$(mktemp -d)
+  slice="$tmpdir/$own_file"
+  _sync_own_records "$(get_machine_id)" >"$slice"
+
+  if [[ ! -s "$slice" ]]; then
+    rm -rf "$tmpdir"
+    return 0
+  fi
+
+  # --filename replaces a file the gist already has; --add is the only way to
+  # create one, and it names it after the local file's basename.
+  local -a edit_args
+  if _sync_remote_files "$gist_id" | grep -qxF "$own_file"; then
+    edit_args=(--filename "$own_file" "$slice")
+  else
+    edit_args=(--add "$slice")
+  fi
+
+  local pushed=0
+  gh gist edit "$gist_id" "${edit_args[@]}" &>/dev/null && pushed=1
+  rm -rf "$tmpdir"
+
+  if [[ "$pushed" -eq 1 ]]; then
     # Update last sync time
     if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
       local timestamp

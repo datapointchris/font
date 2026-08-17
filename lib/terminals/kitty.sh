@@ -11,7 +11,7 @@ kitty_config_path() {
 
 kitty_get_font() {
   if [[ -f "$KITTY_CONFIG_FILE" ]]; then
-    grep "^font_family" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_family //' | xargs
+    font_trim "$(grep "^font_family" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_family //')"
   else
     echo ""
   fi
@@ -20,7 +20,7 @@ kitty_get_font() {
 kitty_get_size() {
   if [[ -f "$KITTY_CONFIG_FILE" ]]; then
     local size
-    size=$(grep "^font_size" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_size //' | xargs)
+    size=$(font_trim "$(grep "^font_size" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_size //')")
     # Remove decimal part if present
     echo "${size%%.*}"
   else
