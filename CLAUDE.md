@@ -35,3 +35,9 @@ Three places got this wrong at once, and one help request tripped all three.
 ## Tests are bats; `tests/test` is not what CI runs
 
 CI runs `bats -r tests`. `tests/test` is a separate hand-rolled runner it never executes, so a check that has to gate a merge belongs in a `.bats` file using `tests/helpers.bash`.
+
+## `font random` weights by recency, and every managed font stays reachable
+
+`compute_font_weights` scores each candidate from days since its last apply, and `weighted_random_choice` samples that distribution. Apply count is the wrong axis: measured 2026-08-19, the 11 managed fonts spanned 17 to 33 applies with eight of them level on 17, while days since last use spanned the full range.
+
+Narrowing the draw to the minimum-count set makes a newly added font the only thing `random` can return until it catches the pack up. `list_fonts_not_rejected` is what the draw reads, and it goes through `get_history` — every font in `_JQ_NORMALIZE_FONT_NAMES` is named one way in the registry and another in the history, so a raw read compares `Fira Code Nerd Font` against a rejection filed as `FiraCode Nerd Font` and finds nothing.

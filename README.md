@@ -72,7 +72,7 @@ font log                  # Complete history with terminal context
 ```bash
 font change               # Interactive picker (rich per-font preview)
 font apply <font>         # Apply a font by name (auto-logs)
-font random               # Apply a least-used font (spreads coverage)
+font random               # Apply a random font, weighted by time since last use
 font last                 # Toggle back to the previous font
 font size-up              # Increase font size by 1 (all terminals)
 font size-down            # Decrease font size by 1 (all terminals)

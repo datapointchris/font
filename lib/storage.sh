@@ -632,6 +632,77 @@ list_rejected_fonts() {
   ' "$FONT_HISTORY_FILE"
 }
 
+# Rejected font names, one per line. One jq over the whole history rather than
+# is_font_rejected per font, which spawns one for every font in the registry.
+#
+# Through get_history, so a rejection recorded under a legacy spelling is read
+# under the name the registry uses. A raw read compares "FiraCode Nerd Font"
+# against a registry saying "Fira Code Nerd Font" and finds no rejection at all.
+get_rejected_font_ids() {
+  get_history | jq -r '
+    group_by(.font) |
+    map(
+      (map(select(.action == "reject" or .action == "unreject")) | sort_by(.ts) | last | .action // "none") as $last |
+      if $last == "reject" then .[0].font else null end
+    ) |
+    map(select(. != null)) |
+    .[]
+  '
+}
+
+# How long a font goes unused before it weighs twice as much as one applied
+# today, and the ceiling that weight climbs to. A font with no applies at all is
+# held at the cap rather than running away with the whole distribution.
+FONT_RECENCY_SCALE_DAYS=30
+FONT_RECENCY_CAP_DAYS=180
+
+# Selection weight per font, read from font names on stdin and printed as
+# "<font>\t<weight>".
+#
+# The axis is time since last apply, not apply count. Measured 2026-08-19
+# against the real history: the 11 managed fonts sat between 17 and 33 applies
+# and eight of them were level on 17. A count that flat separates nothing, and
+# it is a font newly added on zero that a count then singles out.
+compute_font_weights() {
+  local names_json
+  names_json=$(jq -R . | jq -s -c .)
+
+  get_history | jq -r \
+    --argjson names "$names_json" \
+    --argjson scale "$FONT_RECENCY_SCALE_DAYS" \
+    --argjson cap "$FONT_RECENCY_CAP_DAYS" '
+    def parse_ts:
+      if test("[+-][0-9]{2}:[0-9]{2}$") then
+        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+      else
+        fromdateiso8601
+      end;
+
+    (now) as $now |
+    (
+      map(select(.action == "apply")) |
+      group_by(.font) |
+      map({key: .[0].font, value: (max_by(.ts) | .ts)}) |
+      from_entries
+    ) as $last_applied |
+
+    # A clock-skewed record from another machine can date an apply in the
+    # future, which subtracts to a negative age and then to a weight below 1.
+    def clamp_days: if . < 0 then 0 elif . > $cap then $cap else . end;
+
+    $names[] |
+    . as $font |
+    (
+      if $last_applied[$font] == null then
+        $cap
+      else
+        (($now - ($last_applied[$font] | parse_ts)) / 86400) | clamp_days
+      end
+    ) as $days |
+    "\($font)\t\(1 + ($days / $scale))"
+  '
+}
+
 init_storage() {
   if [[ ! -d "$FONT_STATE_DIR" ]]; then
     mkdir -p "$FONT_STATE_DIR"

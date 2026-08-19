@@ -43,6 +43,21 @@ source_font_libs() {
   source "$FONT_ROOT/lib/sync.sh"
 }
 
+# Points font discovery at a sandbox registry holding only the names given.
+# FONT_REGISTRY_FILE is computed from lib.sh's own location, so without this a
+# listing test reads the repo's real registry and its assertions move whenever a
+# font is added.
+#
+# Usage: use_fixture_font_registry "Fixture One" "Fixture Two"
+use_fixture_font_registry() {
+  FONT_REGISTRY_FILE="$BATS_TEST_TMPDIR/font-registry.json"
+
+  printf '%s\n' "$@" | jq -R -s '
+    split("\n") | map(select(length > 0)) |
+    map({key: ., value: {managed: true}}) | from_entries
+  ' >"$FONT_REGISTRY_FILE"
+}
+
 # Appends one history record. Timestamps are arguments, never generated: the
 # ranking and usage-time functions sort and subtract on .ts, so a suite calling
 # `date` would assert against a moving target.
@@ -62,4 +77,15 @@ add_history_record() {
     printf '{"ts":"%s","machine":"%s","terminal":"ghostty","font":"%s","action":"%s"}\n' \
       "$ts" "$machine" "$font" "$action" >>"$FONT_HISTORY_FILE"
   fi
+}
+
+# Runs a pipeline in the shell the test is already in, so `run` can capture it.
+#
+# bats' `run` takes a command, not a pipeline, and `run bash -c "..."` spawns a
+# shell with none of the libraries sourced — so a library function called that
+# way is simply not found, and the test asserts against an empty output.
+#
+# Usage: run pipeline "get_history | jq -r '.[].font'"
+pipeline() {
+  eval "$*"
 }

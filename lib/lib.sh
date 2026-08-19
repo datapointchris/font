@@ -40,6 +40,30 @@ list_fonts() {
   jq -r 'to_entries[] | select(.value.managed == true) | .key' "$FONT_REGISTRY_FILE" | sort
 }
 
+# The set `font random` draws from. `font reject` promises a font is out of
+# rotation, and rejection lives in the history rather than in the registry, so a
+# listing taken from the registry alone still offers every rejected font.
+list_fonts_not_rejected() {
+  local rejected
+  rejected=$(get_rejected_font_ids)
+
+  if [[ -z "$rejected" ]]; then
+    list_fonts
+    return
+  fi
+
+  declare -A rejected_map
+  while IFS= read -r font; do
+    [[ -n "$font" ]] && rejected_map["$font"]=1
+  done <<<"$rejected"
+
+  local font
+  while IFS= read -r font; do
+    [[ -n "${rejected_map[$font]:-}" ]] && continue
+    echo "$font"
+  done < <(list_fonts)
+}
+
 # Get the file path for a font by family name
 # Args: $1 - font family name
 # Returns: Absolute path to font file (prefers Regular/Normal style)
@@ -111,6 +135,35 @@ get_font_style() {
 # Count available fonts
 count_fonts() {
   list_fonts | wc -l | xargs
+}
+
+# Reads "<name>\t<weight>" lines on stdin and prints one name, chosen with
+# probability proportional to its weight. Returns 1 on empty input.
+#
+# One awk over the whole list, seeded from $RANDOM. awk's bare srand() takes the
+# clock in whole seconds, so two picks inside the same second return the same
+# name — which a rotation driven by a keybinding hits routinely.
+weighted_random_choice() {
+  awk -F'\t' -v seed="${RANDOM}$$" '
+    {
+      name[NR] = $1
+      weight[NR] = $2 + 0
+      total += weight[NR]
+    }
+    END {
+      if (NR == 0 || total <= 0) exit 1
+      srand(seed)
+      target = rand() * total
+      for (i = 1; i <= NR; i++) {
+        cumulative += weight[i]
+        if (target <= cumulative) {
+          print name[i]
+          exit 0
+        }
+      }
+      print name[NR]
+    }
+  '
 }
 
 # Format a duration in seconds as a compact human string (e.g. "2h 15m", "3d").

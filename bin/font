@@ -40,15 +40,6 @@ get_version() {
   git -C "$FONT_APP_DIR" describe --tags --always 2>/dev/null || echo "dev"
 }
 
-# List managed fonts excluding rejected ones (for font random)
-list_fonts_not_rejected() {
-  list_fonts | while IFS= read -r font; do
-    if ! is_font_rejected "$font"; then
-      echo "$font"
-    fi
-  done
-}
-
 # The one place a verb's synopsis is written. verb_usage greps it, so a verb
 # added here answers --help without a second entry anywhere.
 commands_table() {
@@ -62,7 +53,7 @@ commands_table() {
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)
-  random               Apply a least-used font (spreads coverage)
+  random               Apply a random font, weighted by time since last use
   last                 Toggle to previously used font
   rank                 Show fonts ranked by likes and by hours used
   stats                Portfolio dashboard (divergence, discovery, per-machine)
@@ -810,42 +801,38 @@ cmd_font_last() {
 }
 
 random_font() {
-  mapfile -t all_fonts < <(list_fonts_not_rejected)
+  local candidates
+  mapfile -t candidates < <(list_fonts_not_rejected)
 
-  if [[ ${#all_fonts[@]} -eq 0 ]]; then
+  if [[ ${#candidates[@]} -eq 0 ]]; then
     echo "Error: No fonts found"
     exit 1
   fi
 
-  # Get apply counts for all fonts
-  declare -A apply_counts
-  while IFS=$'\t' read -r font count; do
-    apply_counts["$font"]=$count
-  done < <(get_all_apply_counts)
+  # Dropping the current font only when something else can be picked, so a
+  # single-font install still applies rather than erroring.
+  local current
+  current=$(get_current_font 2>/dev/null || echo "")
+  if [[ -n "$current" ]] && [[ ${#candidates[@]} -gt 1 ]]; then
+    local remaining=()
+    local font
+    for font in "${candidates[@]}"; do
+      [[ "$font" == "$current" ]] && continue
+      remaining+=("$font")
+    done
+    candidates=("${remaining[@]}")
+  fi
 
-  # Find minimum apply count among available fonts
-  local min_count=999999
-  for font in "${all_fonts[@]}"; do
-    local count="${apply_counts[$font]:-0}"
-    if [[ $count -lt $min_count ]]; then
-      min_count=$count
-    fi
-  done
+  local selected_font
+  selected_font=$(printf '%s\n' "${candidates[@]}" | compute_font_weights | weighted_random_choice)
 
-  # Get all fonts with minimum apply count
-  local least_used=()
-  for font in "${all_fonts[@]}"; do
-    local count="${apply_counts[$font]:-0}"
-    if [[ $count -eq $min_count ]]; then
-      least_used+=("$font")
-    fi
-  done
-
-  # Pick randomly from least-used fonts
-  local selected_font="${least_used[$RANDOM % ${#least_used[@]}]}"
+  if [[ -z "$selected_font" ]]; then
+    echo "Error: Could not select a font"
+    exit 1
+  fi
 
   echo "🎲 Randomly selected: $selected_font"
-  echo "   (${#least_used[@]} fonts with $min_count applies)"
+  echo "   (${#candidates[@]} fonts, weighted toward the least recently used)"
   echo ""
   apply_font_cmd "$selected_font"
 }
