@@ -59,8 +59,8 @@ commands_table() {
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all curated font families
+  list --status <s>    Narrow to one state: active, rejected, all
   reject <message>     Mark current font as rejected (avoids rediscovery)
-  rejected             List all rejected fonts
   unreject             Restore a rejected font (fzf picker with history)
   sync init            Set up cross-machine sync via GitHub Gist
   sync status          Show sync status
@@ -291,51 +291,52 @@ mark_rejected() {
   echo "This font will be tracked to avoid rediscovery."
 }
 
-show_rejected() {
-  local rejected
-  rejected=$(list_rejected_fonts)
+FONT_LIST_USAGE="Usage: font list [--status active|rejected|all]"
 
-  if [[ -z "$rejected" ]] || [[ "$rejected" == "[]" ]]; then
-    echo "No rejected fonts yet."
-    echo ""
-    echo "When you try a font and don't like it, mark it as rejected:"
-    echo "  font reject \"Font Name\" \"reason\""
-    return
-  fi
+# `font list [--status <s>]`, one curated family per line whichever state is
+# asked for. Why each font is in the state it is reads per font, out of the
+# history `font current` and `font info` render.
+#
+# The default is `all`. The registry is curated by hand and stays small, so the
+# rejected half cannot outgrow the active one, and `font apply` validates
+# against the whole registry — a narrowed default would leave `font list`
+# hiding a name the tool still accepts.
+cmd_list() {
+  local status="all"
 
-  echo ""
-  echo "Rejected Fonts"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --status)
+        if [[ -z "${2:-}" ]]; then
+          echo "Error: --status needs a value" >&2
+          echo "$FONT_LIST_USAGE" >&2
+          exit 2
+        fi
+        status="$2"
+        shift 2
+        ;;
+      --status=*)
+        status="${1#--status=}"
+        shift
+        ;;
+      *)
+        echo "Error: font list takes no argument '$1'" >&2
+        echo "$FONT_LIST_USAGE" >&2
+        exit 2
+        ;;
+    esac
+  done
 
-  local count=0
-  while IFS= read -r line; do
-    count=$((count + 1))
-    local font rejected_date reason platforms
-    font=$(echo "$line" | jq -r '.font')
-    rejected_date=$(echo "$line" | jq -r '.rejected_date')
-    reason=$(echo "$line" | jq -r '.reason')
-    platforms=$(echo "$line" | jq -r '.platforms')
-
-    # Format date
-    local date_formatted
-    if date --version &>/dev/null 2>&1; then
-      # GNU date
-      date_formatted=$(date -d "$rejected_date" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
-    else
-      # BSD date (macOS)
-      date_formatted=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${rejected_date:0:19}" +"%Y-%m-%d" 2>/dev/null || echo "$rejected_date")
-    fi
-
-    echo "$count. $font"
-    echo "   Rejected: $date_formatted"
-    echo "   Reason: $reason"
-    [[ -n "$platforms" ]] && echo "   Platforms: $platforms"
-    echo ""
-  done < <(echo "$rejected")
-
-  echo "Total rejected: $count"
-  echo ""
+  case "$status" in
+    all) list_fonts ;;
+    active) list_fonts_active ;;
+    rejected) list_fonts_rejected ;;
+    *)
+      echo "Error: no such status '$status'" >&2
+      echo "$FONT_LIST_USAGE" >&2
+      exit 2
+      ;;
+  esac
 }
 
 unreject_font_interactive() {
@@ -802,7 +803,7 @@ cmd_font_last() {
 
 random_font() {
   local candidates
-  mapfile -t candidates < <(list_fonts_not_rejected)
+  mapfile -t candidates < <(list_fonts_active)
 
   if [[ ${#candidates[@]} -eq 0 ]]; then
     echo "Error: No fonts found"
@@ -1034,7 +1035,7 @@ main() {
       exit 0
       ;;
     list)
-      list_fonts
+      cmd_list "${@:2}"
       ;;
     current)
       show_current_font
@@ -1105,9 +1106,6 @@ main() {
       ;;
     reject)
       mark_rejected "${@:2}"
-      ;;
-    rejected)
-      show_rejected
       ;;
     unreject)
       unreject_font_interactive

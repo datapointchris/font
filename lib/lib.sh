@@ -32,7 +32,9 @@ font_trim() {
 # CORE FUNCTIONS - Each can be tested independently
 # ==============================================================================
 
-FONT_REGISTRY_FILE="$FONT_APP_DIR/data/font-registry.json"
+# An exported value wins, which is how a test points font discovery at a fixture
+# registry rather than at the curated one. Nothing in the tool sets it.
+FONT_REGISTRY_FILE="${FONT_REGISTRY_FILE:-$FONT_APP_DIR/data/font-registry.json}"
 
 # List managed fonts from the registry
 # Returns: One font family name per line (only managed: true entries)
@@ -40,28 +42,45 @@ list_fonts() {
   jq -r 'to_entries[] | select(.value.managed == true) | .key' "$FONT_REGISTRY_FILE" | sort
 }
 
-# The set `font random` draws from. `font reject` promises a font is out of
-# rotation, and rejection lives in the history rather than in the registry, so a
-# listing taken from the registry alone still offers every rejected font.
-list_fonts_not_rejected() {
+# One side of the rejection line, read out of the registry. $1 is "rejected" for
+# the fonts whose last reject/unreject is a reject, "active" for the rest.
+#
+# Both halves come from the registry, so `font list --status active` and
+# `--status rejected` partition `--status all`. A rejection filed against a font
+# outside the registry falls in neither half, because `font list` lists curated
+# families and that font is not one.
+_list_fonts_by_rejection() {
+  local want="$1"
+
   local rejected
   rejected=$(get_rejected_font_ids)
 
-  if [[ -z "$rejected" ]]; then
-    list_fonts
-    return
-  fi
-
   declare -A rejected_map
+  local font
   while IFS= read -r font; do
     [[ -n "$font" ]] && rejected_map["$font"]=1
   done <<<"$rejected"
 
-  local font
+  local state
   while IFS= read -r font; do
-    [[ -n "${rejected_map[$font]:-}" ]] && continue
-    echo "$font"
+    state="active"
+    [[ -n "${rejected_map[$font]:-}" ]] && state="rejected"
+    if [[ "$state" == "$want" ]]; then
+      echo "$font"
+    fi
   done < <(list_fonts)
+}
+
+# The set `font random` draws from. `font reject` promises a font is out of
+# rotation, and rejection lives in the history rather than in the registry, so a
+# listing taken from the registry alone still offers every rejected font.
+list_fonts_active() {
+  _list_fonts_by_rejection active
+}
+
+# The complement, and what `font list --status rejected` prints.
+list_fonts_rejected() {
+  _list_fonts_by_rejection rejected
 }
 
 # Get the file path for a font by family name

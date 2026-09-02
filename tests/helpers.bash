@@ -48,9 +48,13 @@ source_font_libs() {
 # listing test reads the repo's real registry and its assertions move whenever a
 # font is added.
 #
+# Exported, because a test that runs bin/font rather than calling a library
+# function gets a fresh process, and lib.sh takes the exported value over the
+# path it derives.
+#
 # Usage: use_fixture_font_registry "Fixture One" "Fixture Two"
 use_fixture_font_registry() {
-  FONT_REGISTRY_FILE="$BATS_TEST_TMPDIR/font-registry.json"
+  export FONT_REGISTRY_FILE="$BATS_TEST_TMPDIR/font-registry.json"
 
   printf '%s\n' "$@" | jq -R -s '
     split("\n") | map(select(length > 0)) |

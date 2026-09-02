@@ -26,20 +26,20 @@ at_days_offset() {
     || date -u -v "${1}d" +%Y-%m-%dT%H:%M:%SZ
 }
 
-@test "list_fonts_not_rejected drops a rejected font" {
+@test "list_fonts_active drops a rejected font" {
   use_fixture_font_registry "Keeper Mono" "Dropped Mono"
   add_history_record "2025-01-01T00:00:00Z" "Dropped Mono" reject "unreadable italics"
 
-  run list_fonts_not_rejected
+  run list_fonts_active
   assert_output "Keeper Mono"
 }
 
-@test "list_fonts_not_rejected restores a font whose last action is unreject" {
+@test "list_fonts_active restores a font whose last action is unreject" {
   use_fixture_font_registry "Restored Mono"
   add_history_record "2025-01-01T00:00:00Z" "Restored Mono" reject "unreadable italics"
   add_history_record "2025-02-01T00:00:00Z" "Restored Mono" unreject
 
-  run list_fonts_not_rejected
+  run list_fonts_active
   assert_output "Restored Mono"
 }
 

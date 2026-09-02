@@ -62,6 +62,7 @@ checkout that is not sitting on a release tag, or within the interval. Set
 font current              # Show the active font with its full stats
 font info                 # Browse fonts and view detailed history (fzf)
 font list                 # List all curated font families
+font list --status <s>    # Narrow to one state: active, rejected, all
 font rank                 # Two rankings: by likes and by hours used
 font stats                # Portfolio dashboard (divergence, discovery, machines)
 font log                  # Complete history with terminal context
@@ -89,9 +90,14 @@ font like [message]       # Like the current font, optional reason
 font dislike [message]    # Dislike the current font, optional reason
 font note <message>       # Add a note to the current font (message required)
 font reject <message>     # Reject a font so it stops resurfacing (reason required)
-font rejected             # List rejected fonts with reasons
 font unreject             # Restore a rejected font (fzf picker with history)
 ```
+
+Rejection is a state rather than a command of its own, so the rejected families read as `font list
+--status rejected`. The flag takes `active`, `rejected` or `all`, and defaults to `all` — the
+curated registry is small enough that both halves stay worth seeing, and `font apply` accepts every
+name in it. Why a particular font sits where it does reads per font: `font current` and `font info`
+render its history, rejection reason included.
 
 ### Sync (cross-machine)
 
