@@ -9,9 +9,9 @@ on:
 permissions:
   contents: read
 
-# Two pushes to main inside one run's window would otherwise race, and the later
-# run fails pushing its version bump onto a ref that has already moved.
-# Never cancel-in-progress: a canceled release can leave a tag with no release.
+# Two pushes to main inside one run's window would otherwise race to cut the
+# same version. Never cancel-in-progress: a canceled release can leave a tag
+# with no release.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -21,19 +21,10 @@ jobs:
   validate:
     uses: ./.github/workflows/validate.yml
 
+  # go-semantic-release reads no language, so a shell repository that ships
+  # only a tag calls it. `font update` moves between the tags it cuts.
   release:
     needs: validate
-    runs-on: ubuntu-latest
+    uses: datapointchris/reusable-workflows/.github/workflows/go-semantic-release.yml@v1
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      # No changelog-file: the release body is the changelog, and `font update`
-      # reads `git log` between the two tags it moved across rather than a
-      # tracked file.
-      - uses: go-semantic-release/action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
