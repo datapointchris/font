@@ -2,6 +2,3 @@
 # arriving generated is never linted, since normalization of a generated file
 # is undone on the next release and returns as a conflict.
 CHANGELOG.md
-
-# Planning documents - ephemeral, not committed
-.planning/**
