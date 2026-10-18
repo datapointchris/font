@@ -6,9 +6,11 @@ set -euo pipefail
 
 TERMINAL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# The backends read config values through font_trim, so this file cannot be
-# sourced without it. Guarded on its own end, so bin/font sourcing both is free.
+# The backends read config values through font_trim, and every platform branch
+# here reads detect_platform. Both files are guarded on their own end, so
+# bin/font sourcing them too is free.
 source "$TERMINAL_LIB_DIR/lib.sh"
+source "$TERMINAL_LIB_DIR/storage.sh"
 
 source "$TERMINAL_LIB_DIR/terminals/ghostty.sh"
 source "$TERMINAL_LIB_DIR/terminals/kitty.sh"

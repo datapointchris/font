@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# terminal.sh sources this for detect_platform and the machine id, and bin/font
+# sources both, so the guard stops init_storage running twice.
+[[ -n "${_FONT_STORAGE_SOURCED:-}" ]] && return 0
+_FONT_STORAGE_SOURCED=1
+
 _STORAGE_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Dev mode: use FONT_ENV=development (set via direnv in this repository's .envrc)

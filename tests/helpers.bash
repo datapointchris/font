@@ -29,9 +29,9 @@ isolate_font_state() {
   export XDG_LIB_HOME="$HOME/.local/lib"
 }
 
-# Sources the libraries the way bin/font does. terminal.sh pulls in lib.sh for
-# font_trim; the redundant order here mirrors the CLI so the source guard stays
-# covered.
+# Sources the libraries the way bin/font does. terminal.sh pulls in lib.sh and
+# storage.sh itself; the redundant order here mirrors the CLI so the source
+# guards stay covered.
 source_font_libs() {
   source "$FONT_ROOT/lib/lib.sh"
   source "$FONT_ROOT/lib/storage.sh"
