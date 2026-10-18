@@ -33,7 +33,8 @@
     "year": "2020 (Comic Mono), 2018 (Comic Shanns)",
     "license": "MIT",
     "url": "https://dtinth.github.io/comic-mono-font/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.718
   },
   "Comic Shanns Mono Nerd Font": {
     "description": "Nerd Font-patched Comic Shanns Mono by Jesús González — a monospaced adaptation of Shannon Miwa's Comic Shanns v2 (the updated version). Different lineage from Comic Mono (which is based on v1). The Nerd Fonts version includes a manually-added Bold weight inspired by Comic Mono, plus corrected caron/dcaron/tcaron glyphs.",
@@ -43,7 +44,8 @@
     "year": "2018 (Comic Shanns), 2020 (Mono adaptation)",
     "license": "MIT + SIL",
     "url": "https://github.com/jesusmgg/comic-shanns-mono",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.671
   },
   "Serious Shanns Nerd Font": {
     "description": "Nerd Font-patched Serious Shanns — a legibility-focused fork of Comic Mono (which is based on Comic Shanns v1). Created by kaBeech after discovering Comic Mono improved their coding mindset. Key changes: 'a' redesigned to not look like 'o', 'l' distinguished from '1', 'Y' distinguished from 'y'. Adds Light weight and Italic styles not present in Comic Mono.",
@@ -53,7 +55,8 @@
     "year": "2023 (Serious Shanns), 2020 (Comic Mono), 2018 (Comic Shanns)",
     "license": "MIT + SIL",
     "url": "https://github.com/kaBeech/serious-shanns",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.662
   },
   "DroidSansM Nerd Font": {
     "description": "Nerd Font-patched Droid Sans Mono — the monospaced member of the Droid typeface family, commissioned by Google for Android in 2006. Designed for screen legibility on mobile devices. Same designer as Andale Mono. Features upright stress, open forms, and a neutral appearance optimized for UI text.",
@@ -71,7 +74,8 @@
     "year": "2014 (Fira Code), 2013 (Fira Mono)",
     "license": "SIL Open Font License + MIT",
     "url": "https://github.com/tonsky/FiraCode",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.717
   },
   "Fira Code iScript": {
     "description": "A mashup font combining Fira Code (Regular/Bold) with Script12 (Italic). Uses Fira Code's programming ligatures for normal text, but switches to a cursive handwriting style wherever italics appear — comments, keywords, etc. depending on editor theme.",
@@ -90,7 +94,8 @@
     "year": "2015 (Hack), 2003 (Bitstream Vera)",
     "license": "MIT + Bitstream Vera License",
     "url": "https://sourcefoundry.org/hack/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.742
   },
   "Intel One Mono": {
     "description": "Monospaced font designed with input from low-vision and legally blind developers through dozens of live testing sessions. Character differentiation is maximized — sloped stems on 'M' (vs 'N'), exaggerated braces/brackets/parens, maximized height differences between upper and lowercase. Won Fast Company Innovation by Design 2024 award.",
@@ -126,7 +131,8 @@
     "year": "2015 (font)",
     "license": "SIL Open Font License + MIT",
     "url": "https://www.nerdfonts.com/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.743
   },
   "Iosevka Slab": {
     "description": "Iosevka with slab serifs — small horizontal strokes at the ends of letterforms. The serifs aid readability at small sizes and give a more traditional 'typewriter' feel while keeping Iosevka's narrow spacing.",
@@ -153,7 +159,8 @@
     "year": "2015",
     "license": "SIL Open Font License",
     "url": "https://typeof.net/Iosevka/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.743
   },
   "JetBrains Mono Nerd Font": {
     "description": "Nerd Font-patched JetBrains Mono — designed by JetBrains for their IDEs. Features 140+ programming ligatures and an increased x-height for better readability at smaller sizes. Functional ligatures only — arrow and operator combinations, not decorative.",
@@ -162,7 +169,8 @@
     "year": "2020 (font)",
     "license": "SIL Open Font License + MIT",
     "url": "https://www.jetbrains.com/lp/mono/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.74
   },
   "JetBrainsMonoNL Nerd Font": {
     "description": "JetBrains Mono 'No Ligatures' variant with Nerd Font glyphs. Same design as JetBrains Mono but with all programming ligatures removed — for developers who prefer seeing individual characters.",
@@ -199,7 +207,8 @@
     "year": "2010 (Meslo)",
     "license": "Apache License 2.0 + MIT",
     "url": "https://github.com/andreberg/Meslo-Font",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.74
   },
   "MesloLGMDZ Nerd Font": {
     "description": "Meslo LG M with Dotted Zero — medium line gap variant with center-dot zero.",
@@ -253,7 +262,8 @@
     "year": "2023",
     "license": "SIL Open Font License + MIT",
     "url": "https://monaspace.githubnext.com/",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.743
   },
   "MonaspiceRn Nerd Font": {
     "description": "Nerd Font-patched Monaspace Radon — the handwriting member of the Monaspace superfamily. Playful and quirky with dynamic movement. Often used as the italic/comment face when mixing Monaspace fonts. Metrics-compatible with the other four.",
@@ -280,7 +290,8 @@
     "year": "1999 (original), 2017 (PS version via ArtifexSoftware/urw-base35-fonts)",
     "license": "AGPL + Font Exception",
     "url": "https://github.com/ArtifexSoftware/urw-base35-fonts",
-    "managed": false
+    "managed": false,
+    "digit_height": 0.616
   },
   "PT Mono": {
     "description": "Monospaced font from ParaType's PT superfamily, originally developed for the Russian government's 'Public Types of Russian Federation' project. Designed for forms, tables, and structured documents where equal character widths matter for calculating field sizes and column alignment. Exceptional Cyrillic coverage including nearly all minority languages of the Russian Federation.",
@@ -298,7 +309,8 @@
     "year": "2015 (font)",
     "license": "Apache License 2.0 + MIT",
     "url": "https://github.com/googlefonts/RobotoMono",
-    "managed": true
+    "managed": true,
+    "digit_height": 0.721
   },
   "SauceCodePro Nerd Font": {
     "description": "Nerd Font-patched Source Code Pro — Adobe's first open-source font family, designed as the monospaced companion to Source Sans. Named 'SauceCodePro' due to Nerd Fonts naming restrictions. Optimized for UI environments with careful 0/O, 1/l/I disambiguation. Six weights (ExtraLight to Bold) with italics added in 2015, variable format in 2018.",

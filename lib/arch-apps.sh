@@ -2,8 +2,9 @@
 # Arch-specific application backends (Waybar, Hyprlock, Dunst)
 # Uses include/source patterns to avoid modifying tracked dotfiles
 
-# Waybar: Uses @import - style.css imports fonts/current.css which sets font-family
-# (GTK CSS doesn't support var() so we set the property directly)
+# Waybar: style.css imports fonts/current.css, which sets font-family and the
+# -gtk-dpi that calibrates style.css's pt font-size to the font. GTK3 has no
+# font-size-adjust, and -gtk-dpi scales pt sizes while leaving px ones alone.
 WAYBAR_FONTS_DIR="$HOME/.config/waybar/fonts"
 WAYBAR_FONTS_FILE="$WAYBAR_FONTS_DIR/current.css"
 
@@ -11,7 +12,8 @@ WAYBAR_FONTS_FILE="$WAYBAR_FONTS_DIR/current.css"
 HYPRLOCK_FONTS_DIR="$HOME/.config/hypr/fonts"
 HYPRLOCK_FONTS_FILE="$HYPRLOCK_FONTS_DIR/current.conf"
 
-# Dunst: Uses drop-in directory
+# Dunst: Uses drop-in directory, at the size dunstrc states calibrated to the font
+DUNST_CONFIG_FILE="$HOME/.config/dunst/dunstrc"
 DUNST_DROPIN_DIR="$HOME/.config/dunst/dunstrc.d"
 DUNST_FONTS_FILE="$DUNST_DROPIN_DIR/99-font.conf"
 
@@ -70,6 +72,8 @@ EOF
 
 waybar_set_font() {
   local font="$1"
+  local dpi
+  dpi=$(calibrate_font_size "$font" 96)
 
   mkdir -p "$WAYBAR_FONTS_DIR"
 
@@ -77,6 +81,7 @@ waybar_set_font() {
 /* Font configuration - managed by font tool */
 * {
     font-family: "${font}", monospace;
+    -gtk-dpi: ${dpi};
 }
 EOF
 
@@ -118,20 +123,21 @@ hyprlock_set_font() {
 EOF
 }
 
-dunst_get_size() {
-  if [[ -f "$DUNST_FONTS_FILE" ]]; then
-    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null \
-      | grep -o '[0-9]*$' | head -1
-  else
-    echo "10"
+# The size dunstrc's own font line states, or 10. Never the drop-in's, which is
+# already calibrated and would be scaled a second time.
+dunst_base_size() {
+  local size=""
+  if [[ -f "$DUNST_CONFIG_FILE" ]]; then
+    size=$(grep -E '^[[:space:]]*font[[:space:]]*=' "$DUNST_CONFIG_FILE" \
+      | grep -oE '[0-9]+(\.[0-9]+)?[[:space:]]*$' | head -1 | tr -d '[:space:]') || true
   fi
+  printf '%s' "${size:-10}"
 }
 
 dunst_set_font() {
   local font="$1"
   local size
-  size=$(dunst_get_size)
-  [[ -z "$size" ]] && size=10
+  size=$(calibrate_font_size "$font" "$(dunst_base_size)")
 
   mkdir -p "$DUNST_DROPIN_DIR"
 

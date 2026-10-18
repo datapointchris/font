@@ -102,7 +102,7 @@ Each apply writes every app below that is present, whichever terminal you typed 
 | Ghostty | `~/.config/ghostty/fonts/current.conf`, and `current.css` beside it | `config-file = ?fonts/current.conf` and `gtk-custom-css = ?fonts/current.css` |
 | Kitty | `~/.config/kitty/fonts/current.conf` | `include fonts/current.conf` |
 | Windows Terminal, on WSL | its `settings.json`, after copying it to `settings.json.backup` | nothing |
-| Waybar, on Arch | `~/.config/waybar/fonts/current.css` | `@import "fonts/current.css";` in `style.css` |
+| Waybar, on Arch | `~/.config/waybar/fonts/current.css` | `@import "fonts/current.css";` in `style.css`, and its `font-size` in `pt` |
 | Hyprlock, on Arch | `~/.config/hypr/fonts/current.conf` | `source = ~/.config/hypr/fonts/current.conf`, then `font_family = $font` |
 | dunst, on Arch | `~/.config/dunst/dunstrc.d/99-font.conf` | nothing, since it is a drop-in |
 
@@ -110,6 +110,14 @@ The Ghostty and Kitty files are written whether or not either terminal is instal
 are written only when their config directory exists. An include file keeps a config you track in
 version control clean: font rewrites its own file whole and edits nothing around it. Windows
 Terminal is the exception, and its `settings.json` is edited in place with a backup beside it.
+
+Waybar and dunst draw every font at the same digit height. Fonts at one size do not: Serious Shanns
+draws its `0` at 0.662em and Monaspice Ne at 0.743em, so the second looks a size larger. Each size
+you state is read as meant for a font whose digits are 0.74em tall, then scaled by the registry's
+`digit_height` for the font applied. Waybar's scale is the `-gtk-dpi` font writes beside the family.
+GTK applies it to `pt` sizes and ignores `px` ones, which is why `style.css` states its size in `pt`.
+dunst's size is the one on your `dunstrc`'s own `font` line, or 10 when it has none, and the drop-in
+carries it scaled. A font with no `digit_height` is drawn at the size as stated.
 
 Every action appends one record to the history, carrying the context it happened in:
 
@@ -275,8 +283,11 @@ A deleted history file is recreated empty by the next command. A font name recor
 spelling is read under the name the registry uses.
 
 The curated families and their metadata live in the checkout at `data/font-registry.json`: a
-description, creator, year, license and URL for each. Only families marked `managed` appear in
-`font list`, the pickers, the rankings and `font install --check`. `font list` prints them.
+description, creator, year, license and URL for each, and a `digit_height` for each family measured.
+Only families marked `managed` appear in `font list`, the pickers, the rankings and
+`font install --check`. `font list` prints them. After adding a family, install it and run
+`scripts/measure-digit-heights.py`. It reads the `0` glyph's outline from the file fontconfig
+resolves for each family, and leaves a family this machine lacks as it was.
 
 `FONT_ENV=development` moves all of the state above into a gitignored `.dev-data/` inside the
 checkout and turns sync off, so working on font never touches real history. The repository's
