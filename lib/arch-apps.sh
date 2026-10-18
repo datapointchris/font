@@ -80,8 +80,31 @@ waybar_set_font() {
 }
 EOF
 
-  # Reload waybar
-  killall -SIGUSR2 waybar 2>/dev/null || true
+  # A restart rather than SIGUSR2. When playerctld starts after waybar 0.15, its
+  # mpris module leaks a player whose handlers outlive the module a reload
+  # destroys, and the next player event segfaults waybar. A process started
+  # while playerctld runs holds no leaked player.
+  if pgrep -x waybar &>/dev/null; then
+    pkill -x waybar 2>/dev/null || true
+    start_session_daemon waybar
+  fi
+}
+
+# Starts a desktop daemon outside the apply's cgroup, which systemd kills when
+# an apply run as a service ends, setsid or not. Hyprland's child sits where
+# login started it. A transient scope is the fallback.
+start_session_daemon() {
+  local program="$1"
+  if command -v hyprctl &>/dev/null \
+    && [[ "$(hyprctl dispatch "hl.dsp.exec_cmd('$program')" 2>/dev/null)" == "ok" ]]; then
+    return 0
+  fi
+  if systemctl --user show-environment &>/dev/null; then
+    systemd-run --user --scope --collect --quiet "$program" >/dev/null 2>&1 </dev/null &
+  else
+    setsid "$program" >/dev/null 2>&1 </dev/null &
+  fi
+  disown
 }
 
 hyprlock_set_font() {
@@ -118,7 +141,8 @@ dunst_set_font() {
 font = ${font} ${size}
 EOF
 
-  # Restart dunst to pick up changes
+  # D-Bus starts it again at the next notification, through dunst.service, so
+  # it lands outside the apply's cgroup with no help from here.
   killall dunst 2>/dev/null || true
 }
 

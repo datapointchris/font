@@ -78,8 +78,9 @@ The include lines are the one edit your config needs. Any font command creates e
 is missing, naming `monospace` at size 17. The leading `?` tells Ghostty that a missing file is not
 an error. Waybar, Hyprlock and dunst on Arch take their own lines, listed under `apply` below.
 
-`apply` signals Kitty and Waybar to reload, and stops dunst so it reads the drop-in when it next
-starts. For the rest, `apply` prints a reminder to restart the terminal.
+`apply` signals Kitty to reload, restarts Waybar, and stops dunst so it reads the drop-in when it
+next starts. Waybar is restarted rather than signaled, because Waybar 0.15 can crash on its reload
+signal. For the rest, `apply` prints a reminder to restart the terminal.
 
 Every verb answers `font <verb> --help` with its own synopsis. `font help` lists them all.
 
