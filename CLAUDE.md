@@ -38,6 +38,6 @@ CI runs `bats tests/`, which reads the `.bats` files at the top of `tests/` and 
 
 ## `font random` weights by recency, and every managed font stays reachable
 
-`compute_font_weights` scores each candidate from days since its last apply, and `weighted_random_choice` samples that distribution. Apply count is the wrong axis: measured 2026-08-19, the 11 managed fonts spanned 17 to 33 applies with eight of them level on 17, while days since last use spanned the full range.
+`compute_font_weights` scores each candidate from days since its last apply, and `weighted_random_choice` samples that distribution. Apply count is the wrong axis: in a real history the managed fonts' apply counts bunch together, with most of them level on the same count, while days since last use spread across the whole range.
 
 Narrowing the draw to the minimum-count set makes a newly added font the only thing `random` can return until it catches the pack up. `list_fonts_active` is what the draw reads, and it goes through `get_history` — every font in `_JQ_NORMALIZE_FONT_NAMES` is named one way in the registry and another in the history, so a raw read compares `Fira Code Nerd Font` against a rejection filed as `FiraCode Nerd Font` and finds nothing.

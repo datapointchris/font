@@ -663,10 +663,10 @@ FONT_RECENCY_CAP_DAYS=180
 # Selection weight per font, read from font names on stdin and printed as
 # "<font>\t<weight>".
 #
-# The axis is time since last apply, not apply count. Measured 2026-08-19
-# against the real history: the 11 managed fonts sat between 17 and 33 applies
-# and eight of them were level on 17. A count that flat separates nothing, and
-# it is a font newly added on zero that a count then singles out.
+# The axis is time since last apply, not apply count. In a real history the
+# managed fonts' apply counts bunch together, with most of them level on the
+# same count. A count that flat separates nothing, and the font it does single
+# out is one just added at zero applies.
 compute_font_weights() {
   local names_json
   names_json=$(jq -R . | jq -s -c .)
