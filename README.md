@@ -112,8 +112,12 @@ Terminal is the exception, and its `settings.json` is edited in place with a bac
 Every action appends one record to the history, carrying the context it happened in:
 
 ```json
-{"terminal":"ghostty","machine":"laptop","platform":"macos","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17,"ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply"}
+{"terminal":"ghostty","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17,"machine":"laptop","platform":"macos","ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply","trigger":"manual"}
 ```
+
+An apply's `trigger` says who made it: `manual` for one you typed, `schedule` for one the timer
+made. A row with no `trigger` predates the field and was applied by hand. A scheduled apply runs
+with no terminal, so its row carries the machine, platform, time, font and trigger and nothing else.
 
 `random` draws from the curated families, minus the rejected ones and the font already on screen.
 A font's weight grows with the days since it was last applied, up to a cap, and a font never applied

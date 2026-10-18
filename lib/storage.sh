@@ -125,10 +125,17 @@ _storage_get_terminal_context() {
   fi
 }
 
+# Usage: log_action <action> [font] [message] [trigger]
+# trigger says who applied a font, "manual" or "schedule". A row without one was
+# applied by hand. Absent keys are omitted, never blank.
+#
+# A scheduled apply runs with no terminal, so its row carries the machine and
+# platform and none of the fields a terminal reports.
 log_action() {
   local action="$1"
   local font="${2:-}"
   local message="${3:-}"
+  local trigger="${4:-}"
 
   if [[ -z "$action" ]]; then
     echo "Error: action required" >&2
@@ -137,29 +144,21 @@ log_action() {
 
   mkdir -p "$FONT_STATE_DIR"
 
-  local timestamp
-  timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local terminal_context='{}'
+  [[ "$trigger" == "schedule" ]] || terminal_context=$(_storage_get_terminal_context)
 
-  local context
-  context=$(_storage_get_terminal_context)
-
-  local record
-  if [[ -n "$message" ]]; then
-    record=$(echo "$context" | jq -c \
-      --arg ts "$timestamp" \
-      --arg font "$font" \
-      --arg act "$action" \
-      --arg msg "$message" \
-      '. + {ts: $ts, font: $font, action: $act, message: $msg}')
-  else
-    record=$(echo "$context" | jq -c \
-      --arg ts "$timestamp" \
-      --arg font "$font" \
-      --arg act "$action" \
-      '. + {ts: $ts, font: $font, action: $act}')
-  fi
-
-  echo "$record" >>"$FONT_HISTORY_FILE"
+  jq -nc \
+    --argjson terminal "$terminal_context" \
+    --arg machine "$(get_machine_id)" \
+    --arg platform "$(detect_platform)" \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg font "$font" \
+    --arg act "$action" \
+    --arg msg "$message" \
+    --arg trigger "$trigger" \
+    '$terminal + {machine: $machine, platform: $platform, ts: $ts, font: $font, action: $act}
+      + (if $msg == "" then {} else {message: $msg} end)
+      + (if $trigger == "" then {} else {trigger: $trigger} end)' >>"$FONT_HISTORY_FILE"
 }
 
 get_history() {
@@ -435,11 +434,13 @@ get_recently_used() {
   '
 }
 
+# The latest apply of a font made from a terminal. A scheduled apply has none to
+# describe.
 get_last_terminal_context() {
   local font="$1"
 
   get_history | jq --arg font "$font" '
-    map(select(.font == $font and .action == "apply")) |
+    map(select(.font == $font and .action == "apply" and .terminal != null)) |
     sort_by(.ts) | last // {}
   '
 }

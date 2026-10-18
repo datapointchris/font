@@ -124,15 +124,20 @@ EOF
 # FONT OPERATIONS
 # ==============================================================================
 
+# Usage: apply_font_cmd <font> [trigger]
+# trigger is "manual" unless the schedule is applying, which sets "schedule".
 apply_font_cmd() {
   local font="$1"
+  local trigger="${2:-manual}"
 
   echo "Applying font: $font"
 
   local applied
   if applied=$(terminal_apply_font "$font"); then
-    log_action "apply" "$font"
-    sync_after_action
+    log_action "apply" "$font" "" "$trigger"
+    # A scheduled run pushes in the foreground itself, because its unit ends a
+    # backgrounded push.
+    [[ "$trigger" == "schedule" ]] || sync_after_action
     echo ""
     echo "Applied to: $applied"
     echo ""
@@ -667,17 +672,18 @@ show_log() {
   fi
   echo ""
 
+  # The third column is where the action came from: a terminal, or the schedule.
+  local lines
+  lines=$(echo "$history" | jq -r '
+    "\(.ts) | \(.machine // .platform) | \(.terminal // (if .trigger == "schedule" then "schedule" else "-" end)) | \(.action) | \(.font)" +
+    (if .message then " | \(.message)" else "" end)
+  ')
+
   # Format and display with color if bat is available
   if command -v bat &>/dev/null; then
-    echo "$history" | jq -r '
-      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
-      (if .message then " | \(.message)" else "" end)
-    ' | bat --plain --language=log --theme=base16
+    echo "$lines" | bat --plain --language=log --theme=base16
   else
-    echo "$history" | jq -r '
-      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
-      (if .message then " | \(.message)" else "" end)
-    '
+    echo "$lines"
   fi
 }
 

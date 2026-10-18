@@ -273,7 +273,7 @@ _render_font_history() {
     .action as $act |
     .ts[0:10] as $date |
     .message as $msg |
-    if $act == "apply" then "  \($date)  applied"
+    if $act == "apply" then (if .trigger == "schedule" then "  \($date)  applied by the schedule" else "  \($date)  applied" end)
     elif $act == "like" then (if $msg then "  \($date)  liked: \($msg)" else "  \($date)  liked" end)
     elif $act == "dislike" then (if $msg then "  \($date)  disliked: \($msg)" else "  \($date)  disliked" end)
     elif $act == "note" then "  \($date)  note: \($msg)"

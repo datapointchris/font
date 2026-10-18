@@ -55,6 +55,17 @@ Liked Mono"
   assert_output "[2,7200]"
 }
 
+@test "a scheduled apply counts toward its machine but never names a terminal" {
+  # The timer has no terminal, so anything it reported would outvote the
+  # terminals the font was really used in.
+  add_history_record "2026-01-01T10:00:00Z" "Context Mono" apply
+  log_action apply "Context Mono" "" schedule
+  log_action apply "Context Mono" "" schedule
+
+  run pipeline "get_font_context_mode 'Context Mono' | jq -c '[.machine, .terminal]'"
+  assert_output "[\"$(get_machine_id)\",\"ghostty\"]"
+}
+
 @test "discovery counts a font in the month it was first applied, never again" {
   add_history_record "2026-01-05T10:00:00Z" "First Mono" apply
   add_history_record "2026-01-20T10:00:00Z" "Second Mono" apply
