@@ -68,15 +68,6 @@ EOF
   fi
 }
 
-waybar_get_font() {
-  if [[ -f "$WAYBAR_FONTS_FILE" ]]; then
-    grep 'font-family:' "$WAYBAR_FONTS_FILE" 2>/dev/null \
-      | grep -o '"[^"]*"' | head -1 | tr -d '"'
-  else
-    echo ""
-  fi
-}
-
 waybar_set_font() {
   local font="$1"
 
@@ -93,18 +84,6 @@ EOF
   killall -SIGUSR2 waybar 2>/dev/null || true
 }
 
-hyprlock_get_font() {
-  if [[ -f "$HYPRLOCK_FONTS_FILE" ]]; then
-    # $font here is hyprlock's own variable syntax, written literally by
-    # hyprlock_set_font — single quotes are what keeps it literal.
-    # shellcheck disable=SC2016
-    grep '^\$font = ' "$HYPRLOCK_FONTS_FILE" 2>/dev/null \
-      | sed 's/^\$font = //' | head -1
-  else
-    echo ""
-  fi
-}
-
 hyprlock_set_font() {
   local font="$1"
 
@@ -114,15 +93,6 @@ hyprlock_set_font() {
 # Font configuration - managed by font tool
 \$font = ${font}
 EOF
-}
-
-dunst_get_font() {
-  if [[ -f "$DUNST_FONTS_FILE" ]]; then
-    grep '^font = ' "$DUNST_FONTS_FILE" 2>/dev/null \
-      | sed 's/^font = //;s/ [0-9]*$//' | head -1
-  else
-    echo ""
-  fi
 }
 
 dunst_get_size() {

@@ -450,43 +450,6 @@ get_rankings() {
   '
 }
 
-filter_by_font() {
-  local font="$1"
-  get_history | jq --arg font "$font" 'map(select(.font == $font))'
-}
-
-filter_by_action() {
-  local action="$1"
-  get_history | jq --arg action "$action" 'map(select(.action == $action))'
-}
-
-filter_by_platform() {
-  local platform="$1"
-  get_history | jq --arg platform "$platform" 'map(select(.platform == $platform))'
-}
-
-filter_by_date_range() {
-  local start="$1"
-  local end="$2"
-  get_history | jq --arg start "$start" --arg end "$end" '
-    map(select(.ts >= $start and .ts <= $end))
-  '
-}
-
-get_most_liked_fonts() {
-  local limit="${1:-10}"
-
-  get_history | jq --arg limit "$limit" '
-    group_by(.font) |
-    map({
-      font: .[0].font,
-      likes: map(select(.action == "like")) | length
-    }) |
-    sort_by(-.likes) |
-    limit($limit | tonumber; .[])
-  '
-}
-
 # The latest apply of each of the most recently applied fonts, newest first, as
 # one JSON array. unique_by would re-sort by font name, so the first sighting of
 # each font is kept by hand instead.
@@ -502,16 +465,6 @@ get_recently_used() {
   '
 }
 
-get_font_notes() {
-  local font="$1"
-
-  get_history | jq --arg font "$font" '
-    map(select(.font == $font and .action == "note")) |
-    sort_by(.ts) |
-    .[]
-  '
-}
-
 get_last_terminal_context() {
   local font="$1"
 
@@ -519,41 +472,6 @@ get_last_terminal_context() {
     map(select(.font == $font and .action == "apply")) |
     sort_by(.ts) | last // {}
   '
-}
-
-count_total_actions() {
-  get_history | jq 'length'
-}
-
-count_fonts_tracked() {
-  get_history | jq 'group_by(.font) | length'
-}
-
-list_tracked_fonts() {
-  get_history | jq -r 'group_by(.font) | .[].font' | sort -u
-}
-
-get_all_apply_counts() {
-  get_history | jq -r '
-    map(select(.action == "apply")) |
-    group_by(.font) |
-    map({font: .[0].font, count: length}) |
-    .[] |
-    "\(.font)\t\(.count)"
-  '
-}
-
-validate_history_file() {
-  if [[ ! -f "$FONT_HISTORY_FILE" ]]; then
-    return 0
-  fi
-
-  if ! jq -e '.' "$FONT_HISTORY_FILE" >/dev/null 2>&1; then
-    echo "Invalid JSON in: $FONT_HISTORY_FILE" >&2
-    return 1
-  fi
-
-  return 0
 }
 
 reject_font() {
@@ -577,22 +495,6 @@ unreject_font() {
   fi
 
   log_action "unreject" "$font"
-}
-
-is_font_rejected() {
-  local font="$1"
-
-  if [[ ! -f "$FONT_HISTORY_FILE" ]]; then
-    return 1
-  fi
-
-  local last_action
-  last_action=$(jq -s -r --arg font "$font" '
-    map(select(.font == $font and (.action == "reject" or .action == "unreject"))) |
-    sort_by(.ts) | last | .action // "none"
-  ' "$FONT_HISTORY_FILE")
-
-  [[ "$last_action" == "reject" ]]
 }
 
 get_rejected_font_info() {
@@ -636,8 +538,8 @@ list_rejected_fonts() {
   ' "$FONT_HISTORY_FILE"
 }
 
-# Rejected font names, one per line. One jq over the whole history rather than
-# is_font_rejected per font, which spawns one for every font in the registry.
+# Rejected font names, one per line. One jq over the whole history, rather than
+# one per font in the registry.
 #
 # Through get_history, so a rejection recorded under a legacy spelling is read
 # under the name the registry uses. A raw read compares "FiraCode Nerd Font"

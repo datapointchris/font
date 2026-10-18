@@ -15,10 +15,6 @@ GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty/fonts"
 GHOSTTY_CONFIG_FILE="$GHOSTTY_CONFIG_DIR/current.conf"
 GHOSTTY_CSS_FILE="$GHOSTTY_CONFIG_DIR/current.css"
 
-ghostty_config_path() {
-  echo "$GHOSTTY_CONFIG_FILE"
-}
-
 ghostty_get_font() {
   if [[ -f "$GHOSTTY_CONFIG_FILE" ]]; then
     font_trim "$(grep "^font-family" "$GHOSTTY_CONFIG_FILE" 2>/dev/null | cut -d= -f2 | tr -d '"')"

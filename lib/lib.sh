@@ -82,78 +82,9 @@ list_fonts_rejected() {
   _list_fonts_by_rejection rejected
 }
 
-# Get the file path for a font by family name
-# Args: $1 - font family name
-# Returns: Absolute path to font file (prefers Regular/Normal style)
-# Exit: 0 if found, 1 if not found
-get_font_file_path() {
-  local font_name="$1"
-  local font_file
-
-  # Use fc-list to find the font file, preferring Regular/Normal styles
-  # Format: /path/to/font.ttf: Family Name:style=Style Name
-
-  # Special handling for fonts that render too dim with Regular weight
-  # Iosevka Slab - use Medium weight for better visibility (TTC files have family name "Iosevka Slab Medium")
-  if [[ "$font_name" =~ "Iosevka".*"Slab" ]]; then
-    local medium_family="${font_name} Medium"
-    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$medium_family" | grep -iE "style=(Medium|Semibold)" | head -1 | cut -d: -f1)")
-    if [[ -n "$font_file" ]]; then
-      echo "$font_file"
-      return 0
-    fi
-  fi
-
-  # Nimbus Mono PS - use Bold for better visibility (only has Regular and Bold)
-  if [[ "$font_name" == "Nimbus Mono PS" ]]; then
-    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=Bold$" | head -1 | cut -d: -f1)")
-    if [[ -n "$font_file" ]]; then
-      echo "$font_file"
-      return 0
-    fi
-  fi
-
-  # Try to get Regular style first (must be primary style, not secondary in TTC)
-  # Handles numeric weight prefixes like "400 Regular" or plain "Regular"
-  font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=([0-9]+ )?(Regular|Normal|Book|Roman)(,|$)" | head -1 | cut -d: -f1)")
-
-  # If no Regular variant, fall back to any variant (but skip Bold/Italic if possible)
-  if [[ -z "$font_file" ]]; then
-    font_file=$(font_trim "$(fc-list : family file style | grep -F -- "$font_name" | grep -viE "style=(Bold|Italic|Light|Thin|Black|Heavy|Oblique|Slant)" | head -1 | cut -d: -f1)")
-  fi
-
-  # If still nothing, just take whatever is available
-  if [[ -z "$font_file" ]]; then
-    font_file=$(font_trim "$(fc-list : family file | grep -F -- "$font_name" | head -1 | cut -d: -f1)")
-  fi
-
-  if [[ -z "$font_file" ]] || [[ ! -f "$font_file" ]]; then
-    return 1
-  fi
-
-  echo "$font_file"
-  return 0
-}
-
-# Get font style information for a font family
-# Args: $1 - font family name
-# Returns: Style name (e.g., "Regular", "Bold", etc.)
-get_font_style() {
-  local font_name="$1"
-
-  local style
-  style=$(fc-list : family file style | grep -F -- "$font_name" | grep -iE "style=(Regular|Normal|Book|Medium|Roman)" | head -1 | cut -d: -f3 | sed 's/style=//')
-  font_trim "$style" || echo "Unknown"
-}
-
 # ==============================================================================
 # UTILITY FUNCTIONS
 # ==============================================================================
-
-# Count available fonts
-count_fonts() {
-  list_fonts | wc -l | xargs
-}
 
 # Reads "<name>\t<weight>" lines on stdin and prints one name, chosen with
 # probability proportional to its weight. Returns 1 on empty input.

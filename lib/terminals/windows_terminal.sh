@@ -26,10 +26,6 @@ _windows_terminal_find_settings() {
   return 1
 }
 
-windows_terminal_config_path() {
-  _windows_terminal_find_settings
-}
-
 windows_terminal_get_font() {
   local settings
   settings=$(_windows_terminal_find_settings) || return 1
