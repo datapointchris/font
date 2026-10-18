@@ -143,6 +143,17 @@ usage() {
  Font Management
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  Pick a font with font change, or let font random hand you one. With
+  font schedule on, the random draw happens on a timer while you are at
+  the machine. Then judge what is on screen. like, dislike, note and
+  reject act on the current font, so each reads its words as a message
+  and never as a font name.
+
+  dislike lowers a font's score in font rank and leaves it in the random
+  draw. reject takes it out of random and rank until font unreject.
+
+  Every command answers --help.
+
 Commands
 ─────────────────────────
 EOF
@@ -151,14 +162,13 @@ EOF
 
 Examples
 ─────────────────────────
-  font change                         # Interactive picker
-  font size-up                        # Increase font size
-  font size-down                      # Decrease font size
-  font like "Great ligatures"         # Like with reason
-  font dislike "Too wide"             # Dislike with reason
-  font note "Good for prose"          # Add note
-  font rank                           # See rankings
-  font log                            # View history
+  font change                             # Pick a font, with its stats beside it
+  font like "great ligatures"             # Record why the current font works
+  font reject "too wide at small sizes"   # Take the current font out of rotation
+  font note "good for prose"              # Add a note to the current font
+  font dislike "heavy at 11pt"            # Lower the current font in rank
+  font apply "Hack Nerd Font"             # Apply one font by name
+  font rank                               # See rankings
 
 Data Storage
 ─────────────────────────
