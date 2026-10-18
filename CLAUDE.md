@@ -40,7 +40,7 @@ A timer run has no terminal. Its row carries machine and platform and no termina
 
 `get_schedule_turns` ends a turn at the next apply of another font, because a re-apply of one font is not a new session. Another tool restarting waybar on the five-minute marks would race this one, and two restarts at one moment can leave two bars, so checks run two minutes later.
 
-A timer turned on in dev mode carries `FONT_ENV=development` into its unit, so it reads and writes `.dev-data`. Like any dev-mode apply, it still writes the real terminal configs.
+A timer turned on in dev mode is its own unit, `font-schedule-dev`, so it never replaces or removes the installed copy's. It carries `FONT_ENV=development`, so it reads and writes `.dev-data`. Like any dev-mode apply, it still writes the real terminal configs.
 
 ## Tests are bats, at the top of `tests/`
 

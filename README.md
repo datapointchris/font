@@ -256,7 +256,7 @@ systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SI
 `~/Library/LaunchAgents/com.datapointchris.font-schedule.plist`. Each check records its outcome in
 `schedule.json`: waiting, away, blocked, applied or failed. A check counts as applied only when the
 history holds the row the apply wrote, whatever the apply's exit status. `status` warns when no
-check has run for fifteen minutes.
+check has run for three check intervals.
 
 A scheduled change redraws open Kitty windows, and open Ghostty windows on Linux. On macOS Ghostty
 shows it after a config reload or in a new window, the same as a font applied by hand. WSL has no

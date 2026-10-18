@@ -16,8 +16,15 @@ FONT_SCHEDULE_CHECK_OFFSET_MINUTES=2
 # macOS reads input idleness itself. The hypridle listener in the help uses the same figure.
 FONT_SCHEDULE_IDLE_SECONDS=600
 
-FONT_SCHEDULE_UNIT="font-schedule"
-FONT_SCHEDULE_LABEL="com.datapointchris.font-schedule"
+# A development checkout gets a timer of its own beside the installed copy's,
+# so turning either one on or off never replaces or removes the other.
+if _is_dev_mode; then
+  FONT_SCHEDULE_UNIT="font-schedule-dev"
+  FONT_SCHEDULE_LABEL="com.datapointchris.font-schedule-dev"
+else
+  FONT_SCHEDULE_UNIT="font-schedule"
+  FONT_SCHEDULE_LABEL="com.datapointchris.font-schedule"
+fi
 FONT_SCHEDULE_STATE_FILE="$FONT_STATE_DIR/schedule.json"
 
 # The service manager that runs the timer, or nothing. WSL has no display session to read.
@@ -388,6 +395,41 @@ _schedule_timer_state() {
   esac
 }
 
+# No recorded check has two causes: a timer that stopped firing, and runs that
+# die before they record, such as a unit whose program was deleted. schedule.json
+# cannot tell them apart, so the supervisor's record of the runs decides.
+# Args: $1 seconds since the last check, $2 epoch seconds a recent run would follow.
+_schedule_explain_quiet() {
+  local quiet="$1" since="$2"
+  local failing=""
+
+  case "$(schedule_supervisor)" in
+    systemd)
+      local fired
+      fired=$(systemctl --user show "$FONT_SCHEDULE_UNIT.timer" -p LastTriggerUSec --value 2>/dev/null || true)
+      if [[ -n "$fired" && "$fired" != "n/a" ]] \
+        && [[ "$(date -d "$fired" +%s 2>/dev/null || echo 0)" -ge "$since" ]]; then
+        failing="journalctl --user -u $FONT_SCHEDULE_UNIT.service"
+      fi
+      ;;
+    launchd)
+      local code
+      code=$(launchctl print "gui/$(id -u)/$FONT_SCHEDULE_LABEL" 2>/dev/null \
+        | awk -F' = ' '/last exit code/ { print $2; exit }' || true)
+      if [[ "$code" =~ ^[0-9]+$ && "$code" != "0" ]]; then
+        failing="$FONT_STATE_DIR/schedule.log"
+      fi
+      ;;
+  esac
+
+  if [[ -n "$failing" ]]; then
+    echo "  ! No check recorded for $(format_duration "$quiet"), though the timer runs: each run fails first."
+    echo "    Its errors are in: $failing"
+  else
+    echo "  ! No check for $(format_duration "$quiet"), so the timer is not running."
+  fi
+}
+
 schedule_status() {
   echo ""
   echo "Font Schedule"
@@ -447,12 +489,12 @@ schedule_status() {
 
   # A check from before the timer was installed says nothing about whether it runs.
   if [[ "$on" == true ]]; then
-    local installed quiet
+    local installed quiet window=$((FONT_SCHEDULE_CHECK_MINUTES * 60 * 3))
     installed=$(_schedule_mtime "$(_schedule_definition_file)")
     [[ "$installed" -gt "$last_seen" ]] && last_seen=$installed
     quiet=$((now - last_seen))
-    if [[ "$quiet" -gt $((FONT_SCHEDULE_CHECK_MINUTES * 60 * 3)) ]]; then
-      echo "  ! No check for $(format_duration "$quiet"), so the timer is not running."
+    if [[ "$quiet" -gt "$window" ]]; then
+      _schedule_explain_quiet "$quiet" "$((now - window))"
     fi
   fi
 
