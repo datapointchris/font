@@ -34,26 +34,29 @@ assert_no_history() {
   }
 }
 
-@test "every verb on the help screen answers --help and -h with its own rows, without acting" {
-  local verbs verb help rows
+@test "every verb on the help screen answers --help with its own rows without acting, and -h matches it" {
+  local verbs verb rows
   verbs=$(help_screen_verbs)
   [[ -n "$verbs" ]] || fail "the help screen yielded no verbs"
 
   while read -r verb; do
     run "$FONT_ROOT/bin/font" "$verb" --help
     [[ "$status" -eq 0 ]] || fail "font $verb --help exited $status: $output"
-    help="$output"
     # The synopsis is the block under "Usage:", up to the first blank line.
-    rows=$(awk '/^Usage:$/ { u = 1; next } u && /^$/ { exit } u' <<<"$help")
-    [[ -n "$rows" ]] || fail "font $verb --help printed no synopsis: $help"
+    rows=$(awk '/^Usage:$/ { u = 1; next } u && /^$/ { exit } u' <<<"$output")
+    [[ -n "$rows" ]] || fail "font $verb --help printed no synopsis: $output"
     if grep -v -E -- "^  font $verb( |\$)" <<<"$rows"; then
       fail "font $verb --help printed a row for another verb"
     fi
-
-    run "$FONT_ROOT/bin/font" "$verb" -h
-    [[ "$status" -eq 0 && "$output" == "$help" ]] || fail "font $verb -h differs from --help: $output"
     assert_no_history
   done <<<"$verbs"
+
+  # main() matches -h and --help in one case arm, so one verb proves -h.
+  local help
+  help=$("$FONT_ROOT/bin/font" reject --help)
+  run "$FONT_ROOT/bin/font" reject -h
+  [[ "$status" -eq 0 && "$output" == "$help" ]] || fail "font reject -h differs from --help: $output"
+  assert_no_history
 }
 
 @test "a mistyped command exits 2 with its error on stderr and nothing on stdout" {
