@@ -82,9 +82,25 @@ window-title-font-family = "${font}"
 EOF
 
   ghostty_write_css "$font" "$size"
+  ghostty_reload
+}
+
+# Ghostty's GTK app exports a reload-config action on the session bus, and an
+# open window redraws in the new font when it runs. Calling the bus name of a
+# Ghostty that is not running would start one, hence the pgrep. SIGUSR2 also
+# reloads the GTK app, but it ends any Ghostty built without a handler for it.
+# macOS has no session bus, so there Ghostty shows the font at its next config
+# reload or in a new window.
+ghostty_reload() {
+  [[ "$(uname -s)" == "Linux" ]] || return 0
+  pgrep -x ghostty >/dev/null 2>&1 || return 0
+  command -v gdbus >/dev/null 2>&1 || return 0
+  gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty \
+    --method org.gtk.Actions.Activate reload-config '[]' '{}' >/dev/null 2>&1 || true
 }
 
 ghostty_apply() {
   local font="$1"
   ghostty_set_font "$font"
+  ghostty_reload
 }

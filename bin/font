@@ -107,8 +107,9 @@ How it decides:
   it lands while you use it. The timer checks every $FONT_SCHEDULE_CHECK_MINUTES minutes.
 
   The draw is font random's: weighted toward the font you have gone longest
-  without, and never the one on screen. Ghostty shows a new font once its
-  config reloads or in a new window, the same as a font applied by hand.
+  without, and never the one on screen. Open Kitty windows redraw in it, and
+  open Ghostty windows on Linux. On macOS Ghostty shows it after a config
+  reload or in a new window.
 
   font rank counts each font's scheduled turns: kept until the next scheduled
   change, or switched away from by hand. Re-applying the same font ends nothing.
@@ -188,8 +189,7 @@ apply_font_cmd() {
     [[ "$trigger" == "schedule" ]] || sync_after_action
     echo ""
     echo "Applied to: $applied"
-    echo ""
-    echo "Font applied! Restart terminal to see all changes."
+    print_manual_reload_hint
     if schedule_is_on; then
       schedule_next_change_line
     fi
@@ -199,12 +199,19 @@ apply_font_cmd() {
   fi
 }
 
+# An apply reloads kitty, and Ghostty on Linux, and Windows Terminal reloads its
+# settings itself. Ghostty on macOS is the one terminal font cannot reload.
+print_manual_reload_hint() {
+  [[ "$(detect_platform)" == "macos" ]] || return 0
+  echo ""
+  echo "Ghostty shows it after a config reload or in a new window."
+}
+
 cmd_size_up() {
   local result
   if result=$(change_font_size 1); then
     echo "Font size: $result"
-    echo ""
-    echo "Restart terminal to see changes."
+    print_manual_reload_hint
   else
     return 1
   fi
@@ -214,8 +221,7 @@ cmd_size_down() {
   local result
   if result=$(change_font_size -1); then
     echo "Font size: $result"
-    echo ""
-    echo "Restart terminal to see changes."
+    print_manual_reload_hint
   else
     return 1
   fi

@@ -78,9 +78,10 @@ The include lines are the one edit your config needs. Any font command creates e
 is missing, naming `monospace` at size 17. The leading `?` tells Ghostty that a missing file is not
 an error. Waybar, Hyprlock and dunst on Arch take their own lines, listed under `apply` below.
 
-`apply` signals Kitty to reload, restarts Waybar, and stops dunst so it reads the drop-in when it
-next starts. Waybar is restarted rather than signaled, because Waybar 0.15 can crash on its reload
-signal. For the rest, `apply` prints a reminder to restart the terminal.
+`apply` reloads Kitty, and Ghostty on Linux, so their open windows redraw in the new font. It
+restarts Waybar, and stops dunst so it reads the drop-in when it next starts. Waybar is restarted
+rather than signaled, because Waybar's mpris module can crash on its reload signal. Ghostty on macOS
+shows the font after a config reload or in a new window, and `apply` says so there.
 
 Every verb answers `font <verb> --help` with its own synopsis. `font help` lists them all.
 
@@ -257,8 +258,9 @@ systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SI
 history holds the row the apply wrote, whatever the apply's exit status. `status` warns when no
 check has run for fifteen minutes.
 
-A scheduled change reaches Ghostty at its next config reload or in a new window, the same as a font
-applied by hand. WSL has no display session to read, so the schedule does not run there.
+A scheduled change redraws open Kitty windows, and open Ghostty windows on Linux. On macOS Ghostty
+shows it after a config reload or in a new window, the same as a font applied by hand. WSL has no
+display session to read, so the schedule does not run there.
 
 ## Where it writes — one history file, merged from every machine
 
