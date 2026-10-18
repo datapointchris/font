@@ -501,12 +501,13 @@ unreject_font() {
   log_action "unreject" "$font"
 }
 
+# One font's entry from list_rejected_fonts, which is what the unreject picker's
+# preview reads, or {} when the font is not rejected.
 get_rejected_font_info() {
   local font="$1"
 
-  get_history | jq --arg font "$font" '
-    map(select(.font == $font and .action == "reject")) |
-    last // {}
+  list_rejected_fonts | jq -s --arg font "$font" '
+    map(select(.font == $font)) | first // {}
   '
 }
 
@@ -521,7 +522,7 @@ list_rejected_fonts() {
           font: .[0].font,
           rejected_date: $last.ts,
           reason: $last.message,
-          platforms: [$actions[].platform] | unique | join(",")
+          platforms: [$actions[].platform] | unique
         }
       else
         null
