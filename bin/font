@@ -255,17 +255,16 @@ mark_disliked() {
 
 add_note() {
   local message="$*"
-  local font
-  font=$(get_current_font)
-
-  if [[ "$font" == "Unknown" ]]; then
-    terminal_unknown_error
-    exit 1
+  if [[ -z "$message" ]]; then
+    echo "Error: Note message required" >&2
+    verb_usage note >&2
+    exit 2
   fi
 
-  if [[ -z "$message" ]]; then
-    echo "Error: Note message required"
-    echo "Usage: font note <message>"
+  local font
+  font=$(get_current_font)
+  if [[ "$font" == "Unknown" ]]; then
+    terminal_unknown_error
     exit 1
   fi
 
@@ -277,17 +276,16 @@ add_note() {
 
 mark_rejected() {
   local reason="$*"
-  local font
-  font=$(get_current_font)
-
-  if [[ "$font" == "Unknown" ]]; then
-    terminal_unknown_error
-    exit 1
+  if [[ -z "$reason" ]]; then
+    echo "Error: Rejection reason required" >&2
+    verb_usage reject >&2
+    exit 2
   fi
 
-  if [[ -z "$reason" ]]; then
-    echo "Error: Rejection reason required"
-    echo "Usage: font reject <message>"
+  local font
+  font=$(get_current_font)
+  if [[ "$font" == "Unknown" ]]; then
+    terminal_unknown_error
     exit 1
   fi
 
@@ -1101,9 +1099,9 @@ main() {
       ;;
     apply)
       if [[ -z "${2:-}" ]]; then
-        echo "Error: Font name required"
-        usage
-        exit 1
+        echo "Error: Font name required" >&2
+        verb_usage apply >&2
+        exit 2
       fi
       # Validate font name against installed fonts.
       #
@@ -1113,17 +1111,19 @@ main() {
       local available_fonts
       available_fonts=$(list_fonts)
       if ! echo "$available_fonts" | grep -Fxq -- "$2"; then
-        echo "Error: Font '$2' not found"
-        echo ""
         local suggestions
-        suggestions=$(echo "$available_fonts" | grep -i "${2//[-_ ]/.*}" | head -5)
-        if [[ -n "$suggestions" ]]; then
-          echo "Did you mean:"
-          echo "  ${suggestions//$'\n'/$'\n'  }"
-        fi
-        echo ""
-        echo "Run 'font list' to see all available fonts."
-        exit 1
+        suggestions=$(echo "$available_fonts" | grep -i -- "${2//[-_ ]/.*}" | head -5 || true)
+        {
+          echo "Error: Font '$2' not found"
+          if [[ -n "$suggestions" ]]; then
+            echo ""
+            echo "Did you mean:"
+            echo "  ${suggestions//$'\n'/$'\n'  }"
+          fi
+          echo ""
+          echo "Run 'font list' to see all available fonts."
+        } >&2
+        exit 2
       fi
       apply_font_cmd "$2"
       ;;
@@ -1165,6 +1165,7 @@ main() {
       ;;
     sync)
       case "${2:-}" in
+        "") verb_usage sync ;;
         init)
           sync_init
           ;;
@@ -1196,8 +1197,9 @@ main() {
           sync_on
           ;;
         *)
-          echo "Usage: font sync <init|status|push|pull|on|off>"
-          exit 1
+          echo "Error: no such sync command '$2'" >&2
+          verb_usage sync >&2
+          exit 2
           ;;
       esac
       ;;
@@ -1269,7 +1271,7 @@ main() {
       echo "Unknown command: $1" >&2
       echo "" >&2
       usage >&2
-      exit 1
+      exit 2
       ;;
   esac
 }

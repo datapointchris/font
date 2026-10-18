@@ -117,6 +117,6 @@ font() {
 
 @test "rejected is not a verb" {
   run font rejected
-  assert_failure
+  assert_failure 2
   assert_output --partial "Unknown command: rejected"
 }
