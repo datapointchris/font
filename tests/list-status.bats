@@ -2,10 +2,10 @@
 # `font list --status`, the filter that carries rejection.
 #
 # Rejection is a lifecycle state, so it is a value the listing takes rather than
-# a verb of its own — cli-design.md § "A lifecycle is one `--status` enum,
-# spelled in the field's own words". The two properties that make it an enum
-# rather than a pair of separate listings: the halves partition, and a value
-# outside the enum is a usage error rather than an empty list.
+# a verb of its own: a lifecycle is one `--status` enum, spelled in the field's
+# own words. The two properties that make it an enum rather than a pair of
+# separate listings: the halves partition, and a value outside the enum is a
+# usage error rather than an empty list.
 #
 # These run bin/font rather than the library, because the flag parsing and the
 # refusals are the thing under test and they live in the CLI.

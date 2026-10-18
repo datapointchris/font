@@ -18,8 +18,12 @@ else
 fi
 FONT_HISTORY_FILE="$FONT_STATE_DIR/history.jsonl"
 
-# Temporary font name migration (remove after all machines have synced)
-# Old Nerd Font names -> new spaced names from curate-fonts.sh rename step
+# Maps the family names fonts carried before scripts/curate-fonts.sh spaced them
+# out to the names the registry uses. log_action only appends, so a history
+# written before the rename keeps rows under the old names until a sync pull
+# rewrites it, and on a machine with sync off it keeps them for good. get_history
+# and the sync merge read through this, so one font is not ranked, rejected or
+# merged as two.
 _JQ_NORMALIZE_FONT_NAMES='
   .font = (
     if .font == "ComicMonoNF" then "Comic Mono Nerd Font"
