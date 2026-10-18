@@ -707,7 +707,9 @@ show_log() {
   if [[ -f "$FONT_HISTORY_FILE" ]]; then
     local entry_count rejected_count
     entry_count=$(wc -l <"$FONT_HISTORY_FILE" | xargs)
-    rejected_count=$(jq -s 'map(select(.action == "reject")) | length' "$FONT_HISTORY_FILE")
+    # Fonts whose latest reject or unreject is a reject, not reject records: a
+    # font rejected, restored and rejected again is one rejected font.
+    rejected_count=$(get_rejected_font_ids | grep -c . || true)
     printf "  Entries: %d\n" "$entry_count"
     printf "  Rejected fonts: %d\n" "$rejected_count"
   fi
