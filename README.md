@@ -103,7 +103,7 @@ Each apply writes every app below that is present, whichever terminal you typed 
 | Kitty | `~/.config/kitty/fonts/current.conf` | `include fonts/current.conf` |
 | Windows Terminal, on WSL | its `settings.json`, after copying it to `settings.json.backup` | nothing |
 | Waybar, on Arch | `~/.config/waybar/fonts/current.css` | `@import "fonts/current.css";` in `style.css`, and its `font-size` in `pt` |
-| Hyprlock, on Arch | `~/.config/hypr/fonts/current.conf` | `source = ~/.config/hypr/fonts/current.conf`, then `font_family = $font` |
+| Hyprlock, on Arch | `~/.config/hypr/fonts/current.conf` | `source = ~/.config/hypr/fonts/current.conf`, then `font_family = $font`, and each label's text in a sized span |
 | dunst, on Arch | `~/.config/dunst/dunstrc.d/99-font.conf` | nothing, since it is a drop-in |
 
 The Ghostty and Kitty files are written whether or not either terminal is installed. The Arch apps
@@ -111,13 +111,27 @@ are written only when their config directory exists. An include file keeps a con
 version control clean: font rewrites its own file whole and edits nothing around it. Windows
 Terminal is the exception, and its `settings.json` is edited in place with a backup beside it.
 
-Waybar and dunst draw every font at the same digit height. Fonts at one size do not: Serious Shanns
-draws its `0` at 0.662em and Monaspice Ne at 0.743em, so the second looks a size larger. Each size
-you state is read as meant for a font whose digits are 0.74em tall, then scaled by the registry's
-`digit_height` for the font applied. Waybar's scale is the `-gtk-dpi` font writes beside the family.
+Waybar, Hyprlock and dunst draw every font at the same digit height. Fonts at one size do not:
+Serious Shanns draws its `0` at 0.662em and Monaspice Ne at 0.743em, so the second looks a size
+larger. Each size you state is read as meant for a font whose digits are 0.74em tall, then scaled by
+the registry's `digit_height` for the font applied. Waybar's scale is the `-gtk-dpi` font writes
+beside the family.
 GTK applies it to `pt` sizes and ignores `px` ones, which is why `style.css` states its size in `pt`.
 dunst's size is the one on your `dunstrc`'s own `font` line, or 10 when it has none, and the drop-in
 carries it scaled. A font with no `digit_height` is drawn at the size as stated.
+
+Hyprlock's scale is `$font_scale`, a plain factor such as `1.118`. A label states its size inside its
+text, and hyprlang multiplies it when it reads the config:
+
+```ini
+text = <span size="{{$font_scale * 18}}pt">$USER</span>
+```
+
+`font_size = {{$font_scale * 18}}` would be simpler and fails: `font_size` is an integer setting, and
+hyprlang rejects `20.124` there. A percentage span such as `size="111.8%"` is also out, because
+Hyprlock's renderer adds its own scale of 1 over the text, which replaces it. Define `$font = monospace`
+and `$font_scale = 1` before the `source` line, so a machine that has never run `font apply` still
+parses.
 
 Every action appends one record to the history, carrying the context it happened in:
 

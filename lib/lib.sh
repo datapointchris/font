@@ -220,14 +220,23 @@ get_font_info() {
 # An app's config states its size for a font whose digits are this many ems tall.
 FONT_REFERENCE_DIGIT_HEIGHT=0.74
 
-# Scale a size stated for the reference digit height so this font's digits draw
-# as tall. A font with no digit_height in the registry keeps the size.
+# The factor that draws this font's digits as tall as the reference's. 1 for a
+# font with no digit_height in the registry.
+# Args: $1 - font name
+# Returns: the factor, to three decimals
+font_digit_scale() {
+  local font="$1"
+  jq -r --arg font "$font" --argjson ref "$FONT_REFERENCE_DIGIT_HEIGHT" \
+    '$ref / (.[$font].digit_height // $ref) * 1000 | round / 1000' "$FONT_REGISTRY_FILE"
+}
+
+# Scale a size stated for the reference digit height to this font.
 # Args: $1 - font name, $2 - size
 # Returns: the scaled size, to one decimal
 calibrate_font_size() {
   local font="$1" size="$2"
-  jq -r --arg font "$font" --argjson size "$size" --argjson ref "$FONT_REFERENCE_DIGIT_HEIGHT" \
-    '$size * $ref / (.[$font].digit_height // $ref) * 10 | round / 10' "$FONT_REGISTRY_FILE"
+  jq -n --argjson size "$size" --argjson scale "$(font_digit_scale "$font")" \
+    '$size * $scale * 10 | round / 10'
 }
 
 # Render the "About" block (registry metadata). Shown first: it's the identity

@@ -8,7 +8,10 @@
 WAYBAR_FONTS_DIR="$HOME/.config/waybar/fonts"
 WAYBAR_FONTS_FILE="$WAYBAR_FONTS_DIR/current.css"
 
-# Hyprlock: Uses source and variables
+# Hyprlock: Uses source and variables. $font_scale multiplies a label's size in a
+# hyprlang {{ }} expression inside a <span size="...pt">. font_size is an
+# integer setting that rejects a fractional result, and hyprlock's renderer
+# overrides a percentage span with its own scale of 1.
 HYPRLOCK_FONTS_DIR="$HOME/.config/hypr/fonts"
 HYPRLOCK_FONTS_FILE="$HYPRLOCK_FONTS_DIR/current.conf"
 
@@ -48,8 +51,9 @@ EOF
       cat >"$HYPRLOCK_FONTS_FILE" <<'EOF'
 # Font configuration - managed by font tool
 # Source this in hyprlock.conf: source = ~/.config/hypr/fonts/current.conf
-# Then use: font_family = $font
+# Then use: font_family = $font, and text = <span size="{{$font_scale * 24}}pt">...</span>
 $font = monospace
+$font_scale = 1
 EOF
     fi
   fi
@@ -114,12 +118,15 @@ start_session_daemon() {
 
 hyprlock_set_font() {
   local font="$1"
+  local scale
+  scale=$(font_digit_scale "$font")
 
   mkdir -p "$HYPRLOCK_FONTS_DIR"
 
   cat >"$HYPRLOCK_FONTS_FILE" <<EOF
 # Font configuration - managed by font tool
 \$font = ${font}
+\$font_scale = ${scale}
 EOF
 }
 
