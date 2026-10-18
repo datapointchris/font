@@ -4,13 +4,15 @@
 
 set -euo pipefail
 
-# Source the library (handle symlinks)
+# Follows the link chain back to the checkout, since the installer puts a link
+# to this file on PATH. readlink without -f reads one link on GNU and BSD alike.
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
-if [[ -L "$SCRIPT_PATH" ]]; then
-  # Get absolute path of symlink target
-  SCRIPT_PATH="$(python3 -c "import os; print(os.path.realpath('$SCRIPT_PATH'))")"
-fi
-SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+while [[ -L "$SCRIPT_PATH" ]]; do
+  _link_dir="$(cd "$(dirname "$SCRIPT_PATH")" && pwd -P)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ "$SCRIPT_PATH" == /* ]] || SCRIPT_PATH="$_link_dir/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd -P)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source formatting library for colorized help

@@ -48,7 +48,6 @@ the interval. Set `NO_AUTO_UPDATE` or `FONT_NO_AUTO_UPDATE` to turn it off, and
 - `jq` — every read of the history and the registry
 - `fzf` — `change`, `info` and `unreject`
 - `git` — the installer, version reporting and `font update`
-- `python3` — resolves the `~/.local/bin/font` link back to the checkout
 - `gh` — `font install` downloads through it, and `font sync` stores history with it
 - `bashselfupdate` — `font update` and the daily notice; the installer installs it
 - fontconfig — `font install` refreshes the font cache on Linux and WSL
