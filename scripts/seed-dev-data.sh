@@ -80,25 +80,25 @@ mkdir -p "$DATA_DIR"
 
 # Fira Code — the heavily-used, well-liked favorite. Applied across many months.
 assert_managed "Fira Code Nerd Font"
-seed_applies "Fira Code Nerd Font" macmini macos ghostty 14 \
+seed_applies "Fira Code Nerd Font" desktop macos ghostty 14 \
   2025-09:3 2025-11:5 2026-01:6 2026-04:4 2026-07:7
-rate "Fira Code Nerd Font" macmini macos ghostty 14 2025-09 like 5 "great ligatures"
-rate "Fira Code Nerd Font" macmini macos ghostty 14 2025-09 note 2 "good for prose"
+rate "Fira Code Nerd Font" desktop macos ghostty 14 2025-09 like 5 "great ligatures"
+rate "Fira Code Nerd Font" desktop macos ghostty 14 2025-09 note 2 "good for prose"
 
 # JetBrains Mono — used a lot but never rated (used_not_liked divergence).
 assert_managed "JetBrains Mono Nerd Font"
-seed_applies "JetBrains Mono Nerd Font" mbp macos ghostty 15 \
+seed_applies "JetBrains Mono Nerd Font" laptop macos ghostty 15 \
   2025-10:4 2025-12:6 2026-02:8 2026-05:5 2026-06:6
 
 # Iosevka — liked but barely used (liked_not_used divergence).
 assert_managed "Iosevka Nerd Font"
-seed_applies "Iosevka Nerd Font" macmini macos ghostty 16 2025-11:1 2026-01:1
-rate "Iosevka Nerd Font" macmini macos ghostty 16 2025-11 like 4 "beautiful"
+seed_applies "Iosevka Nerd Font" desktop macos ghostty 16 2025-11:1 2026-01:1
+rate "Iosevka Nerd Font" desktop macos ghostty 16 2025-11 like 4 "beautiful"
 
 # Monaspice Ne — liked, moderate use on the laptop.
 assert_managed "Monaspice Ne Nerd Font"
-seed_applies "Monaspice Ne Nerd Font" mbp macos ghostty 15 2026-03:5 2026-06:4
-rate "Monaspice Ne Nerd Font" mbp macos ghostty 15 2026-03 like 3
+seed_applies "Monaspice Ne Nerd Font" laptop macos ghostty 15 2026-03:5 2026-06:4
+rate "Monaspice Ne Nerd Font" laptop macos ghostty 15 2026-03 like 3
 
 # Hack — mixed reception on the arch box.
 assert_managed "Hack Nerd Font"
@@ -109,17 +109,17 @@ rate "Hack Nerd Font" archlinux archlinux kitty 14 2025-12 note 1 "decent at 14p
 
 # Meslo LGM — a little use, one like.
 assert_managed "Meslo LGM Nerd Font"
-seed_applies "Meslo LGM Nerd Font" macmini macos ghostty 13 2026-02:2
-rate "Meslo LGM Nerd Font" macmini macos ghostty 13 2026-02 like 1
+seed_applies "Meslo LGM Nerd Font" desktop macos ghostty 13 2026-02:2
+rate "Meslo LGM Nerd Font" desktop macos ghostty 13 2026-02 like 1
 
 # Roboto Mono — disliked.
 assert_managed "Roboto Mono Nerd Font"
-seed_applies "Roboto Mono Nerd Font" macmini macos ghostty 14 2025-10:1 2025-11:1
-rate "Roboto Mono Nerd Font" macmini macos ghostty 14 2025-10 dislike 2 "not for me"
+seed_applies "Roboto Mono Nerd Font" desktop macos ghostty 14 2025-10:1 2025-11:1
+rate "Roboto Mono Nerd Font" desktop macos ghostty 14 2025-10 dislike 2 "not for me"
 
 # Comic Mono — neutral, tried briefly.
 assert_managed "Comic Mono Nerd Font"
-seed_applies "Comic Mono Nerd Font" mbp macos ghostty 16 2026-05:2
+seed_applies "Comic Mono Nerd Font" laptop macos ghostty 16 2026-05:2
 
 # Iosevka Term Slab — the most recent addition on arch.
 assert_managed "Iosevka Term Slab Nerd Font"
@@ -127,9 +127,9 @@ seed_applies "Iosevka Term Slab Nerd Font" archlinux archlinux kitty 15 2026-07:
 
 # Comic Shanns Mono — tried, then rejected.
 assert_managed "Comic Shanns Mono Nerd Font"
-seed_applies "Comic Shanns Mono Nerd Font" macmini macos ghostty 14 2026-04:2
-rate "Comic Shanns Mono Nerd Font" macmini macos ghostty 14 2026-04 dislike 2 "too playful"
-emit "2026-04-20T12:00:00Z" "Comic Shanns Mono Nerd Font" reject macmini macos ghostty 14 "too clownish for daily use"
+seed_applies "Comic Shanns Mono Nerd Font" desktop macos ghostty 14 2026-04:2
+rate "Comic Shanns Mono Nerd Font" desktop macos ghostty 14 2026-04 dislike 2 "too playful"
+emit "2026-04-20T12:00:00Z" "Comic Shanns Mono Nerd Font" reject desktop macos ghostty 14 "too clownish for daily use"
 
 # Sort chronologically (history is otherwise append-order; readers sort anyway).
 tmp="$(mktemp)"

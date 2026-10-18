@@ -27,9 +27,9 @@ source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
 source "$FONT_APP_DIR/lib/sync.sh"
 
-# Sourced if present rather than required, so an installation predating this
-# dependency still runs every command it ran before. `font update` says how to
-# get it; the notice simply does not appear. Re-running install.sh installs it.
+# Sourced if present rather than required, so every command but `font update`
+# runs without it. `font update` says how to get it; the notice simply does not
+# appear. Re-running install.sh installs it.
 BASHSELFUPDATE_LOAD="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate/load.bash"
 if [[ -f "$BASHSELFUPDATE_LOAD" ]]; then
   source "$BASHSELFUPDATE_LOAD"
@@ -64,8 +64,8 @@ commands_table() {
   unreject             Restore a rejected font (fzf picker with history)
   sync init            Set up cross-machine sync via GitHub Gist
   sync status          Show sync status
-  sync push            Force push to gist
-  sync pull            Force pull from gist
+  sync push            Pull, then upload this machine's rows
+  sync pull            Merge every other machine's rows in now
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
   install              Install curated fonts from GitHub Release

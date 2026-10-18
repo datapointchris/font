@@ -29,8 +29,8 @@ record() {
   add_history_record "2025-01-01T00:00:00Z" "Fira Code" apply "" archlinux
 
   local peer
-  peer="$(record 2025-01-02T00:00:00Z macmini "Iosevka" apply)
-$(record 2025-01-03T00:00:00Z macmini "Fira Code" reject)"
+  peer="$(record 2025-01-02T00:00:00Z laptop "Iosevka" apply)
+$(record 2025-01-03T00:00:00Z laptop "Fira Code" reject)"
 
   run _sync_merge_histories "$FONT_HISTORY_FILE" archlinux "$peer"
   assert_success
@@ -45,9 +45,9 @@ $(record 2025-01-03T00:00:00Z macmini "Fira Code" reject)"
 
 @test "a row another machine deleted disappears from here too" {
   add_history_record "2025-01-01T00:00:00Z" "Fira Code" apply "" archlinux
-  add_history_record "2025-01-02T00:00:00Z" "Iosevka" apply "" macmini
+  add_history_record "2025-01-02T00:00:00Z" "Iosevka" apply "" laptop
 
-  run _sync_merge_histories "$FONT_HISTORY_FILE" archlinux "$(record 2025-01-05T00:00:00Z macmini "Monaspice Ne Nerd Font" apply)"
+  run _sync_merge_histories "$FONT_HISTORY_FILE" archlinux "$(record 2025-01-05T00:00:00Z laptop "Monaspice Ne Nerd Font" apply)"
   assert_success
   assert_equal "${#lines[@]}" 2
   refute_output --partial '"font":"Iosevka"'
@@ -74,14 +74,14 @@ $(record 2025-01-03T00:00:00Z macmini "Fira Code" reject)"
 }
 
 @test "the merge normalizes the machine before deciding whose row it is" {
-  # 306 records in the real history spell this machine "macos-Macmini". Without
-  # normalization they belong to no machine and vanish from every file.
-  add_history_record "2025-01-01T00:00:00Z" "Fira Code" apply "" "macos-Macmini"
+  # A legacy record spells its machine "macos-Laptop". Without normalization it
+  # belongs to no machine and vanishes from every file.
+  add_history_record "2025-01-01T00:00:00Z" "Fira Code" apply "" "macos-Laptop"
 
-  run _sync_merge_histories "$FONT_HISTORY_FILE" macmini ""
+  run _sync_merge_histories "$FONT_HISTORY_FILE" laptop ""
   assert_success
   assert_equal "${#lines[@]}" 1
-  assert_output --partial '"machine":"macmini"'
+  assert_output --partial '"machine":"laptop"'
 }
 
 @test "the merge normalizes font names on both sides" {
@@ -96,8 +96,8 @@ $(record 2025-01-03T00:00:00Z macmini "Fira Code" reject)"
   add_history_record "2025-01-05T00:00:00Z" "Fira Code" apply "" archlinux
 
   local peer
-  peer="$(record 2025-01-01T00:00:00Z macmini "Iosevka" apply)
-$(record 2025-01-01T00:00:00Z macmini "Iosevka" apply)"
+  peer="$(record 2025-01-01T00:00:00Z laptop "Iosevka" apply)
+$(record 2025-01-01T00:00:00Z laptop "Iosevka" apply)"
 
   run _sync_merge_histories "$FONT_HISTORY_FILE" archlinux "$peer"
   assert_success
@@ -123,7 +123,7 @@ $(record 2025-01-01T00:00:00Z macmini "Iosevka" apply)"
 
 @test "_sync_own_records emits only this machine's rows, sorted" {
   add_history_record "2025-01-03T00:00:00Z" "Fira Code" apply "" archlinux
-  add_history_record "2025-01-01T00:00:00Z" "Iosevka" apply "" macmini
+  add_history_record "2025-01-01T00:00:00Z" "Iosevka" apply "" laptop
   add_history_record "2025-01-02T00:00:00Z" "Monaspice Ne Nerd Font" apply "" archlinux
 
   run _sync_own_records archlinux

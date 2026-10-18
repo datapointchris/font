@@ -6,7 +6,7 @@ set -euo pipefail
 
 _STORAGE_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Dev mode: use FONT_ENV=development (set via direnv in ~/tools/font/.envrc)
+# Dev mode: use FONT_ENV=development (set via direnv in this repository's .envrc)
 _is_dev_mode() {
   [[ "${FONT_ENV:-}" == "development" ]]
 }

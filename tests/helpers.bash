@@ -2,7 +2,7 @@
 # Shared helpers. Sourced by every .bats file.
 #
 # tests/test is a separate hand-rolled runner and is not what CI executes — CI
-# runs `bats -r tests`, so a check that has to gate a merge belongs in a .bats
+# runs `bats tests/`, so a check that has to gate a merge belongs in a .bats
 # file using these.
 
 FONT_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"

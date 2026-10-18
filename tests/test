@@ -406,32 +406,32 @@ test_machine_normalization() {
   # Legacy platform-host labels with case and platform drift, plus one already
   # in the new bare-host form, plus two genuinely different WSL machines.
   {
-    echo '{"ts":"2026-01-01T10:00:00Z","font":"A","action":"apply","machine":"macos-Macmini"}'
-    echo '{"ts":"2026-01-02T10:00:00Z","font":"A","action":"apply","machine":"macos-macmini"}'
+    echo '{"ts":"2026-01-01T10:00:00Z","font":"A","action":"apply","machine":"macos-Desktop"}'
+    echo '{"ts":"2026-01-02T10:00:00Z","font":"A","action":"apply","machine":"macos-desktop"}'
     echo '{"ts":"2026-01-03T10:00:00Z","font":"B","action":"apply","machine":"arch-archlinux"}'
     echo '{"ts":"2026-01-04T10:00:00Z","font":"B","action":"apply","machine":"archlinux-archlinux"}'
-    echo '{"ts":"2026-01-05T10:00:00Z","font":"C","action":"apply","machine":"mbp"}'
-    echo '{"ts":"2026-01-06T10:00:00Z","font":"D","action":"apply","machine":"wsl-PF4ZV43G"}'
-    echo '{"ts":"2026-01-07T10:00:00Z","font":"E","action":"apply","machine":"wsl-PF5XMXFY"}'
+    echo '{"ts":"2026-01-05T10:00:00Z","font":"C","action":"apply","machine":"laptop"}'
+    echo '{"ts":"2026-01-06T10:00:00Z","font":"D","action":"apply","machine":"wsl-TOWER1"}'
+    echo '{"ts":"2026-01-07T10:00:00Z","font":"E","action":"apply","machine":"wsl-TOWER2"}'
   } >>"$test_history"
 
   local machines
   machines=$(get_history | jq -c '[.[].machine] | unique')
 
-  local expected='["archlinux","macmini","mbp","pf4zv43g","pf5xmxfy"]'
+  local expected='["archlinux","desktop","laptop","tower1","tower2"]'
   if [[ "$machines" == "$expected" ]]; then
     test_pass "Drifted labels merge; distinct machines stay distinct"
   else
     test_fail "Normalized machines were $machines (expected $expected)"
   fi
 
-  # The two mac-mini records must collapse to a single machine.
-  local macmini_count
-  macmini_count=$(get_history | jq '[.[] | select(.machine == "macmini")] | length')
-  if [[ "$macmini_count" -eq 2 ]]; then
-    test_pass "Both mac-mini records map to one machine label"
+  # The two desktop records must collapse to a single machine.
+  local desktop_count
+  desktop_count=$(get_history | jq '[.[] | select(.machine == "desktop")] | length')
+  if [[ "$desktop_count" -eq 2 ]]; then
+    test_pass "Both desktop records map to one machine label"
   else
-    test_fail "macmini record count was $macmini_count (expected 2)"
+    test_fail "desktop record count was $desktop_count (expected 2)"
   fi
 
   rm -rf "$test_dir"

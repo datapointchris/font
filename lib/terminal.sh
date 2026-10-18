@@ -101,7 +101,7 @@ get_machine_id() {
   # field, so it does not belong here — prefixing it (the old "platform-host"
   # format) both duplicated the platform and split one machine across records
   # when the platform label changed (e.g. arch -> archlinux). Lowercasing keeps
-  # a host that reports "Macmini" and "macmini" as one machine.
+  # a host that reports "Laptop" and "laptop" as one machine.
   local host
   # uname -n is POSIX and works on macOS, Linux, BSDs
   host=$(uname -n 2>/dev/null | cut -d. -f1 | tr '[:upper:]' '[:lower:]')

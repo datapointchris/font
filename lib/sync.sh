@@ -155,7 +155,7 @@ _sync_create_gist() {
 # made here survive until the next push.
 #
 # The machine normalizer runs on both sides. Ownership is decided by .machine, so
-# a legacy "macos-macmini" record would otherwise belong to no machine at all.
+# a legacy "macos-laptop" record would otherwise belong to no machine at all.
 #
 # Args: <local_file> <machine_id> [remote_content]
 _sync_merge_histories() {
@@ -424,7 +424,7 @@ sync_off() {
     echo "$state" | jq '.enabled = false' >"$FONT_SYNC_STATE_FILE"
     echo "✓ Sync disabled"
     echo ""
-    echo "Run 'font sync init' to re-enable."
+    echo "Run 'font sync on' to resume it."
   else
     echo "Sync was not initialized."
   fi
