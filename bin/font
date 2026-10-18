@@ -171,7 +171,7 @@ mark_liked() {
   font=$(get_current_font)
 
   if [[ "$font" == "Unknown" ]]; then
-    echo "Error: No font currently configured"
+    terminal_unknown_error
     exit 1
   fi
 
@@ -187,7 +187,7 @@ mark_disliked() {
   font=$(get_current_font)
 
   if [[ "$font" == "Unknown" ]]; then
-    echo "Error: No font currently configured"
+    terminal_unknown_error
     exit 1
   fi
 
@@ -203,7 +203,7 @@ add_note() {
   font=$(get_current_font)
 
   if [[ "$font" == "Unknown" ]]; then
-    echo "Error: No font currently configured"
+    terminal_unknown_error
     exit 1
   fi
 
@@ -225,7 +225,7 @@ mark_rejected() {
   font=$(get_current_font)
 
   if [[ "$font" == "Unknown" ]]; then
-    echo "Error: No font currently configured"
+    terminal_unknown_error
     exit 1
   fi
 
@@ -600,8 +600,8 @@ show_current_font() {
   font=$(get_current_font)
 
   if [[ "$font" == "Unknown" ]]; then
-    echo "No font currently configured"
-    return
+    terminal_unknown_error
+    return 1
   fi
 
   display_font_details "$font" "full"

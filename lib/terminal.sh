@@ -59,6 +59,14 @@ detect_terminal() {
   fi
 }
 
+# What a command acting on this terminal's font says when detect_terminal
+# returns unknown. Over ssh, or in a tmux server started elsewhere, the
+# variable is often what is missing, so the message names each one.
+terminal_unknown_error() {
+  echo "Error: font cannot tell which terminal this is." >&2
+  echo "It knows Ghostty (GHOSTTY_RESOURCES_DIR), Kitty (KITTY_WINDOW_ID) and Windows Terminal (WT_SESSION), and none of those variables is set here." >&2
+}
+
 detect_tmux() {
   [[ -n "${TMUX:-}" ]] && echo "true" || echo "false"
 }
@@ -189,9 +197,13 @@ change_font_size() {
   local current_size
   current_size=$(get_current_font_size)
 
-  if [[ "$current_size" == "Unknown" || -z "$current_size" ]]; then
-    echo "Error: Could not read current font size" >&2
-    echo "Run 'font apply <name>' first to initialize font config" >&2
+  if [[ "$current_size" == "Unknown" ]]; then
+    terminal_unknown_error
+    return 1
+  fi
+  if [[ -z "$current_size" ]]; then
+    echo "Error: $(detect_terminal)'s font settings name no size" >&2
+    echo "Run 'font apply <name>' to write one" >&2
     return 1
   fi
 
