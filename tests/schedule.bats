@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
-# When the schedule changes the font: the hold each kind of apply earns, and the presence check.
+# When the schedule changes the font: the hold each kind of apply earns, the presence check, and
+# how font rank counts the turns it gave each font.
 
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
@@ -54,4 +55,18 @@ loginctl() {
   SESSION_HINTS=(IdleHint=no LockedHint=no)
   run pipeline "schedule_decide $due | cut -f1"
   assert_output "due"
+}
+
+@test "a turn ends at the next apply of another font on its own machine, and one still running is not counted" {
+  add_apply_record "2026-01-01T00:00:00Z" "Turn Mono" schedule
+  add_apply_record "2026-01-01T01:00:00Z" "Other Mono" manual otherbox
+  add_apply_record "2026-01-01T02:00:00Z" "Turn Mono" manual
+  add_apply_record "2026-01-01T03:00:00Z" "Hand Mono" manual
+  add_apply_record "2026-01-01T04:00:00Z" "Kept Mono" schedule
+  add_apply_record "2026-01-01T10:00:00Z" "Turn Mono" schedule
+  add_apply_record "2026-01-01T11:00:00Z" "Hand Mono" manual
+  add_apply_record "2026-01-01T12:00:00Z" "Running Mono" schedule
+  run pipeline "get_schedule_turns | jq -sc 'map([.font, .turns, .kept, .switched, .median_switch_seconds])'"
+  # Turn Mono's first turn runs three hours and its second one, so the median is two.
+  assert_output '[["Kept Mono",1,1,0,null],["Turn Mono",2,0,2,7200]]'
 }

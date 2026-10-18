@@ -157,7 +157,7 @@ font: `font current` and `font info` render its history, rejection reason includ
 ```bash
 font current   # this terminal's font: description, history, stats and a 12-month usage sparkline
 font info      # the same page for any curated font, chosen in fzf
-font rank      # two rankings, one by likes and one by hours used
+font rank      # one ranking by likes and one by hours used, then each font's scheduled turns
 font stats     # where the two signals disagree, how fast you try fonts, each machine's favorite
 font log       # every record, with the machine and terminal it came from
 ```
@@ -172,7 +172,9 @@ font keeps two signals and never blends them:
   knows when it ended.
 
 `font rank` shows the two as separate lists, because a font you keep reaching for is a different
-signal from one you liked once. Both lists rank only curated fonts that are not rejected.
+signal from one you liked once. Both lists rank only curated fonts that are not rejected. Under
+them, the fonts the schedule has applied show how often each kept the screen until the next
+scheduled change.
 `font stats` reads the whole history: fonts used more than average but never rated, fonts liked
 but used less than average, how many fonts you first tried each month, and the most-used font on
 each machine.
@@ -216,7 +218,19 @@ lands while you are using it. On macOS that means input within the last ten minu
 means logind marks your display session neither idle nor locked. The draw is `font random`'s.
 
 Every scheduled apply is logged with `"trigger":"schedule"`. So the history shows which fonts you
-switched away from and which stayed on until the timer replaced them.
+switched away from and which stayed on until the timer replaced them. `font rank` counts both for
+each font under `SCHEDULED TURNS`:
+
+```text
+SCHEDULED TURNS
+ 1. Hack Nerd Font                   1/1 kept   0 switched
+ 2. Iosevka Term Slab Nerd Font      1/2 kept   1 switched after 1h 30m
+ 3. JetBrains Mono Nerd Font         0/1 kept   1 switched after 20m
+```
+
+A turn starts at a scheduled apply and ends at the next apply of another font on the same machine.
+It was kept when the schedule made that apply, and switched when you did. Re-applying the same font
+ends nothing, and a turn still running is not counted.
 
 hypridle does not set logind's idle hint by itself. This listener in `hypridle.conf` does:
 

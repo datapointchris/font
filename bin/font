@@ -49,7 +49,7 @@ commands_table() {
   note <message>       Add note to current font (message required)
   random               Apply a random font, weighted by time since last use
   last                 Toggle to previously used font
-  rank                 Show fonts ranked by likes and by hours used
+  rank                 Show fonts ranked by likes and by hours, and their scheduled turns
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all curated font families
@@ -109,6 +109,9 @@ How it decides:
   The draw is font random's: weighted toward the font you have gone longest
   without, and never the one on screen. Ghostty shows a new font once its
   config reloads or in a new window, the same as a font applied by hand.
+
+  font rank counts each font's scheduled turns: kept until the next scheduled
+  change, or switched away from by hand. Re-applying the same font ends nothing.
 
   Away on macOS means no input for $idle_minutes minutes. On Linux it means logind's
   IdleHint or LockedHint is set for your display session. hypridle does not set
@@ -538,6 +541,39 @@ _render_rank_section() {
   done <<<"$sorted"
 }
 
+# Finished scheduled turns per ranked font, most often kept first. Prints
+# nothing until the schedule has finished a turn.
+# Args: $1 rankings JSON array, $2 name width.
+_render_turns_section() {
+  local rankings="$1" name_width="$2"
+  local rows
+  rows=$(get_schedule_turns | jq -s -r --argjson r "$rankings" '
+    ($r | map(.font)) as $ranked
+    | map(select(.font as $f | ($ranked | index($f)) != null))
+    | sort_by(-(.kept / .turns), -.turns, .font)
+    | .[]
+    | [.font, .kept, .turns, .switched, (.median_switch_seconds | if . == null then "" else floor end)]
+    | @tsv')
+  [[ -z "$rows" ]] && return 0
+
+  local c_reset='\033[0m'
+  local c_blue='\033[0;34m'
+  echo ""
+  echo -e "${c_blue}SCHEDULED TURNS${c_reset}"
+
+  local rank=0 font kept turns switched median
+  while IFS=$'\t' read -r font kept turns switched median; do
+    rank=$((rank + 1))
+    if [[ ${#font} -gt $name_width ]]; then
+      font="${font:0:$((name_width - 3))}..."
+    fi
+    local after=""
+    [[ -n "$median" ]] && after=" after $(format_duration "$median")"
+    printf "%2d. %-${name_width}s  %7s kept  %2d switched%s\n" \
+      "$rank" "$font" "$kept/$turns" "$switched" "$after"
+  done <<<"$rows"
+}
+
 show_rankings() {
   # Restrict to fonts in the current registry, then rank the same set two ways.
   local available_json rankings count
@@ -565,6 +601,7 @@ show_rankings() {
 
   _render_rank_section "BY LIKES" "$rankings" likes "$name_width"
   _render_rank_section "BY HOURS USED" "$rankings" hours "$name_width"
+  _render_turns_section "$rankings" "$name_width"
   echo ""
 }
 

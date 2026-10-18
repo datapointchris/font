@@ -419,6 +419,44 @@ get_rankings() {
   '
 }
 
+# Each font's finished scheduled turns, one object per font. A turn starts at a
+# scheduled apply and ends at the next apply of another font on the same
+# machine, so a re-apply of the same font does not end it. The turn was kept when
+# that apply was the schedule's too, and switched when it was a hand apply. A
+# turn still running is left out.
+get_schedule_turns() {
+  get_history | jq -c "$_JQ_TIMELINE_DEFS"'
+    def median:
+      sort
+      | if length == 0 then null
+        elif length % 2 == 1 then .[length / 2 | floor]
+        else (.[length / 2 - 1] + .[length / 2]) / 2
+        end;
+
+    [
+      map(select(.action == "apply")) | group_by(.machine)[] | sort_by(.ts)
+      | . as $applies
+      | range(0; $applies | length) as $i
+      | select($applies[$i].trigger == "schedule")
+      | first(range($i + 1; $applies | length) | select($applies[.].font != $applies[$i].font)) as $end
+      | {
+          font: $applies[$i].font,
+          kept: ($applies[$end].trigger == "schedule"),
+          seconds: (($applies[$end].ts | parse_ts) - ($applies[$i].ts | parse_ts))
+        }
+    ]
+    | group_by(.font)
+    | map({
+        font: .[0].font,
+        turns: length,
+        kept: (map(select(.kept)) | length),
+        switched: (map(select(.kept | not)) | length),
+        median_switch_seconds: (map(select(.kept | not) | .seconds) | median)
+      })
+    | .[]
+  '
+}
+
 # The latest apply of each of the most recently applied fonts, newest first, as
 # one JSON array. unique_by would re-sort by font name, so the first sighting of
 # each font is kept by hand instead.
