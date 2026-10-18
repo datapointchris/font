@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
-# What `font random` draws from, and how the draw is weighted.
+# What `font random` draws from, how the draw is weighted, and which font
+# `font last` returns to.
 #
 # Two properties carry the whole design. Every managed font is reachable on any
 # draw, and a rejected font is reachable on none. Anything that narrows the draw
@@ -116,4 +117,18 @@ at_days_offset() {
   # 9:1 over 40 draws; a fair sampler clears half by a margin no seed explains.
   run awk -v n="$heavy" 'BEGIN { print (n > 20) ? "yes" : "no" }'
   assert_output "yes"
+}
+
+@test "get_recently_used lists each font once, newest apply first" {
+  # `font last` toggles between the first two. Alphabetical order would put
+  # Newer Mono first, which is the order a name-keyed dedupe leaves behind.
+  add_history_record "2025-01-01T00:00:00Z" "Older Mono" apply
+  add_history_record "2025-01-02T00:00:00Z" "Newer Mono" apply
+  add_history_record "2025-01-03T00:00:00Z" "Older Mono" apply
+  add_history_record "2025-01-04T00:00:00Z" "Newest Mono" apply
+
+  run pipeline "get_recently_used 2 | jq -r '.[].font'"
+  assert_success
+  assert_output "Newest Mono
+Older Mono"
 }

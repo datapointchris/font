@@ -487,14 +487,18 @@ get_most_liked_fonts() {
   '
 }
 
+# The latest apply of each of the most recently applied fonts, newest first, as
+# one JSON array. unique_by would re-sort by font name, so the first sighting of
+# each font is kept by hand instead.
 get_recently_used() {
   local limit="${1:-10}"
 
-  get_history | jq --arg limit "$limit" '
+  get_history | jq -c --argjson limit "$limit" '
     map(select(.action == "apply")) |
-    sort_by(-.ts) |
-    unique_by(.font) |
-    limit($limit | tonumber; .[])
+    sort_by(.ts) | reverse |
+    reduce .[] as $apply ([];
+      if any(.[]; .font == $apply.font) then . else . + [$apply] end) |
+    .[:$limit]
   '
 }
 
