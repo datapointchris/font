@@ -80,7 +80,7 @@ waybar_set_font() {
 }
 EOF
 
-  # A restart rather than SIGUSR2. When playerctld starts after waybar 0.15, its
+  # A restart rather than SIGUSR2. When playerctld starts after waybar, its
   # mpris module leaks a player whose handlers outlive the module a reload
   # destroys, and the next player event segfaults waybar. A process started
   # while playerctld runs holds no leaked player.

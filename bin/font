@@ -72,9 +72,10 @@ commands_table() {
 EOF
 }
 
-# Answers `font <verb> --help`. Every row whose first word is the verb, so `sync`
-# prints its six and a plain verb prints its one. A verb whose rows cannot say
-# how it behaves defines <verb>_help_details, which prints under them.
+# Answers `font <verb> --help`. Every row whose first word is the verb, so a verb
+# with subcommands prints one row for each and a plain verb prints its own. A
+# verb whose rows cannot say how it behaves defines <verb>_help_details, which
+# prints under them.
 verb_usage() {
   local verb="$1"
   local rows

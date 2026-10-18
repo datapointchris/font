@@ -9,9 +9,9 @@ _FONT_SCHEDULE_SOURCED=1
 FONT_SCHEDULE_TURN_HOURS=6
 FONT_SCHEDULE_HOLD_HOURS=12
 FONT_SCHEDULE_CHECK_MINUTES=5
-# theme's timer checks on the five-minute marks, and both tools restart waybar.
+# Another tool restarting waybar on the five-minute marks would race this one.
 # Two restarts at one moment can each kill the old bar and start a new one,
-# leaving two bars, so this one checks two minutes later.
+# leaving two bars, so checks run two minutes later.
 FONT_SCHEDULE_CHECK_OFFSET_MINUTES=2
 # macOS reads input idleness itself. The hypridle listener in the help uses the same figure.
 FONT_SCHEDULE_IDLE_SECONDS=600
