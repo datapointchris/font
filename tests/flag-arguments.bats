@@ -73,9 +73,11 @@ setup() {
   refute_output --partial "Usage: echo"
 }
 
-@test "a font-name check separates the pattern from grep's own flags" {
-  # `grep -Fxq --help` prints grep's help and exits 0 on GNU grep, so the name
-  # validated and the apply went ahead.
-  run bash -c 'printf "Roboto Mono\n" | grep -Fxq -- "--help"'
-  assert_failure
+@test "font apply with a name that reads as one of grep's flags exits 2 and logs nothing" {
+  # `grep -Fxq --version` prints grep's version and exits 0, so without `--`
+  # before the pattern the name validated and a font called "--version" applied.
+  use_fixture_font_registry "Roboto Mono"
+  run "$FONT_ROOT/bin/font" apply --version
+  assert_failure 2
+  [[ ! -s "$FONT_HISTORY_FILE" ]] || fail "history written: $(cat "$FONT_HISTORY_FILE")"
 }

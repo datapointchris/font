@@ -30,7 +30,7 @@ Three places got this wrong at once, and one help request tripped all three.
 - **`grep -F -- "$pattern"`.** Without the separator `grep -Fxq --help` prints grep's help and exits 0 on GNU grep, so `font apply --help` validated and applied a font named `--help`.
 - **Every verb answers `--help` before dispatch.** The rating verbs read their message as `"$*"`, so the flag became the reason and `font reject --help` hid a real font.
 
-`tests/flag-arguments.bats` pins all three.
+`tests/flag-arguments.bats` pins the first two, and `tests/help.bats` walks every verb's `--help`.
 
 ## The schedule reads only this machine's apply rows
 
