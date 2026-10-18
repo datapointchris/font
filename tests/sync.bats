@@ -108,11 +108,12 @@ $(record 2025-01-01T00:00:00Z laptop "Iosevka" apply)"
 
 @test "the pre-split history.jsonl is not one of the per-machine files" {
   # A machine on an older release still writes the whole merged set to that name.
-  run grep -E '^history-.+\.jsonl$' <<<"history.jsonl"
-  assert_failure
+  gh() { printf '%s\n' history.jsonl history-archlinux.jsonl history-laptop.jsonl; }
 
-  run grep -E '^history-.+\.jsonl$' <<<"history-archlinux.jsonl"
+  run _sync_remote_files 0123abcd
   assert_success
+  assert_output "history-archlinux.jsonl
+history-laptop.jsonl"
 }
 
 @test "the filename carries this machine's id" {
