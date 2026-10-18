@@ -62,6 +62,21 @@ _JQ_NORMALIZE_MACHINE='
   end
 '
 
+# The physical machine's hostname, lowercased. Platform is recorded as its own
+# field, so prefixing it (the old "platform-host" format) both duplicated the
+# platform and split one machine across records when the platform label changed.
+#
+# Read through the same normalizer as every history row, because the schedule,
+# the usage timeline and sync each select this machine's rows by equality. A
+# host named "linux-box" reads back as "box", so a raw id would match none of
+# its own rows: a push would send nothing and a pull would drop them.
+get_machine_id() {
+  local host
+  host=$(uname -n 2>/dev/null | cut -d. -f1 | tr '[:upper:]' '[:lower:]')
+  [[ -z "$host" ]] && host="unknown"
+  jq -rn --arg host "$host" "{machine: \$host} | $_JQ_NORMALIZE_MACHINE | .machine"
+}
+
 _storage_get_terminal_context() {
   if type -t get_terminal_context &>/dev/null; then
     get_terminal_context
