@@ -712,8 +712,7 @@ show_font_info() {
   local preview_script="/tmp/font-info-preview-$$.sh"
   cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
-source "$FONT_APP_DIR/lib/lib.sh"
-source "$FONT_APP_DIR/lib/storage.sh"
+source "$FONT_APP_DIR/lib/terminal.sh"
 font="\$1"
 display_font_details "\$font" "full"
 PREVIEW_EOF
@@ -793,8 +792,7 @@ change_font() {
   local preview_script="/tmp/font-change-preview-$$.sh"
   cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
-source "$FONT_APP_DIR/lib/lib.sh"
-source "$FONT_APP_DIR/lib/storage.sh"
+source "$FONT_APP_DIR/lib/terminal.sh"
 display_font_details "\$1" "compact"
 PREVIEW_EOF
 
