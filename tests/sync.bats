@@ -116,10 +116,16 @@ $(record 2025-01-01T00:00:00Z laptop "Iosevka" apply)"
 history-laptop.jsonl"
 }
 
-@test "the filename carries this machine's id" {
-  run _sync_history_filename
+@test "a host named Linux-Box finds the rows it wrote among its own when it pushes" {
+  # The normalizer reads linux-box as the legacy platform-Host form and files
+  # its rows under "box". An id compared raw would match none of them, and the
+  # push would drop every row this machine wrote.
+  uname() { echo Linux-Box; }
+  log_action apply "Fira Code Nerd Font"
+
+  run _sync_own_records "$(get_machine_id)"
   assert_success
-  assert_output "history-$(get_machine_id).jsonl"
+  assert_equal "${#lines[@]}" 1
 }
 
 @test "_sync_own_records emits only this machine's rows, sorted" {

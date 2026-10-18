@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# terminal.sh sources this for detect_platform and the machine id, and bin/font
+# sources both, so the guard stops init_storage running twice.
+[[ -n "${_FONT_STORAGE_SOURCED:-}" ]] && return 0
+_FONT_STORAGE_SOURCED=1
+
 _STORAGE_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Dev mode: use FONT_ENV=development (set via direnv in this repository's .envrc)
@@ -57,6 +62,61 @@ _JQ_NORMALIZE_MACHINE='
   end
 '
 
+# The physical machine's hostname, lowercased. Platform is recorded as its own
+# field, so prefixing it (the old "platform-host" format) both duplicated the
+# platform and split one machine across records when the platform label changed.
+#
+# Read through the same normalizer as every history row, because the schedule,
+# the usage timeline and sync each select this machine's rows by equality. A
+# host named "linux-box" reads back as "box", so a raw id would match none of
+# its own rows: a push would send nothing and a pull would drop them.
+get_machine_id() {
+  local host
+  host=$(uname -n 2>/dev/null | cut -d. -f1 | tr '[:upper:]' '[:lower:]')
+  [[ -z "$host" ]] && host="unknown"
+  jq -rn --arg host "$host" "{machine: \$host} | $_JQ_NORMALIZE_MACHINE | .machine"
+}
+
+# The definitions every reading of time on screen shares, so `font rank`,
+# `font stats` and the per-font page agree to the second.
+#
+# parse_ts accepts the +00:00 offset older records carry, which fromdateiso8601
+# rejects outright.
+#
+# apply_spans reads the history array and emits one object per apply. An apply
+# ends at the next apply on its own machine, since another machine's apply says
+# nothing about this screen. Each machine's latest apply is open: on this
+# machine it runs to now while it is still the current font, and on any other
+# its duration is null, because nothing here knows when it ended. A session is a
+# maximal run of one font on one machine, so a re-apply does not start one.
+IFS= read -r -d '' _JQ_TIMELINE_DEFS <<'JQ' || true
+  def parse_ts:
+    if test("[+-][0-9]{2}:[0-9]{2}$") then gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
+    else fromdateiso8601
+    end;
+
+  def apply_spans($machine; $current):
+    map(select(.action == "apply")) | group_by(.machine)[] | sort_by(.ts)
+    | . as $applies
+    | range(0; $applies | length) as $i
+    | $applies[$i] as $apply
+    | {
+        font: $apply.font,
+        machine: $apply.machine,
+        month: $apply.ts[0:7],
+        starts_session: ($i == 0 or $applies[$i - 1].font != $apply.font),
+        seconds: (
+          if $i < (($applies | length) - 1) then
+            ($applies[$i + 1].ts | parse_ts) - ($apply.ts | parse_ts)
+          elif $apply.machine == $machine and $apply.font == $current then
+            (now | floor) - ($apply.ts | parse_ts)
+          else
+            null
+          end
+        )
+      };
+JQ
+
 _storage_get_terminal_context() {
   if type -t get_terminal_context &>/dev/null; then
     get_terminal_context
@@ -65,10 +125,17 @@ _storage_get_terminal_context() {
   fi
 }
 
+# Usage: log_action <action> [font] [message] [trigger]
+# trigger says who applied a font, "manual" or "schedule". A row without one was
+# applied by hand. Absent keys are omitted, never blank.
+#
+# A scheduled apply runs with no terminal, so its row carries the machine and
+# platform and none of the fields a terminal reports.
 log_action() {
   local action="$1"
   local font="${2:-}"
   local message="${3:-}"
+  local trigger="${4:-}"
 
   if [[ -z "$action" ]]; then
     echo "Error: action required" >&2
@@ -77,29 +144,21 @@ log_action() {
 
   mkdir -p "$FONT_STATE_DIR"
 
-  local timestamp
-  timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local terminal_context='{}'
+  [[ "$trigger" == "schedule" ]] || terminal_context=$(_storage_get_terminal_context)
 
-  local context
-  context=$(_storage_get_terminal_context)
-
-  local record
-  if [[ -n "$message" ]]; then
-    record=$(echo "$context" | jq -c \
-      --arg ts "$timestamp" \
-      --arg font "$font" \
-      --arg act "$action" \
-      --arg msg "$message" \
-      '. + {ts: $ts, font: $font, action: $act, message: $msg}')
-  else
-    record=$(echo "$context" | jq -c \
-      --arg ts "$timestamp" \
-      --arg font "$font" \
-      --arg act "$action" \
-      '. + {ts: $ts, font: $font, action: $act}')
-  fi
-
-  echo "$record" >>"$FONT_HISTORY_FILE"
+  jq -nc \
+    --argjson terminal "$terminal_context" \
+    --arg machine "$(get_machine_id)" \
+    --arg platform "$(detect_platform)" \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg font "$font" \
+    --arg act "$action" \
+    --arg msg "$message" \
+    --arg trigger "$trigger" \
+    '$terminal + {machine: $machine, platform: $platform, ts: $ts, font: $font, action: $act}
+      + (if $msg == "" then {} else {message: $msg} end)
+      + (if $trigger == "" then {} else {trigger: $trigger} end)' >>"$FONT_HISTORY_FILE"
 }
 
 get_history() {
@@ -162,84 +221,30 @@ get_font_stats() {
   '
 }
 
+# Seconds each font was on screen, summed over every machine's timeline.
 calculate_usage_time() {
   local current_font="$1"
 
-  get_history | jq -r --arg current "$current_font" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
-    [map(select(.action == "apply")) | sort_by(.ts) | to_entries[]] as $applies |
-
-    ($applies | map(
-      . as $entry |
-      $entry.key as $idx |
-      $entry.value as $apply |
-
-      if ($idx < (($applies | length) - 1)) then
-        {
-          font: $apply.font,
-          duration: (($applies[$idx + 1].value.ts | parse_ts) - ($apply.ts | parse_ts))
-        }
-      elif $apply.font == $current then
-        {
-          font: $apply.font,
-          duration: ((now | floor) - ($apply.ts | parse_ts))
-        }
-      else
-        null
-      end
-    ) | map(select(. != null))) as $durations |
-
-    ($durations | group_by(.font) | map({
-      key: .[0].font,
-      value: (map(.duration) | add // 0)
-    }) | from_entries)
+  get_history | jq -c --arg current "$current_font" --arg machine "$(get_machine_id)" "$_JQ_TIMELINE_DEFS"'
+    [apply_spans($machine; $current) | select(.seconds != null)]
+    | group_by(.font)
+    | map({key: .[0].font, value: (map(.seconds) | add)})
+    | from_entries
   '
 }
 
 # Usage detail for a single font: total seconds, session count, average session,
-# last-used timestamp, and seconds since last use. Usage is computed the same way
-# as calculate_usage_time (time until the next apply of any font), so numbers
-# agree across the tool. A "session" is a maximal run of this font in the apply
-# timeline — re-applying the same font back-to-back stays one session.
+# last-used timestamp, and seconds since last use.
 get_font_usage_stats() {
   local font="$1"
   local current_font
   current_font=$(get_current_font 2>/dev/null || echo "")
 
-  get_history | jq -c --arg font "$font" --arg current "$current_font" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
-    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
-    ($applies | length) as $n |
-
-    ([range(0; $n) as $i |
-      $applies[$i] as $a |
-      if $i < ($n - 1) then
-        {font: $a.font, duration: (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))}
-      elif $a.font == $current then
-        {font: $a.font, duration: ((now | floor) - ($a.ts | parse_ts))}
-      else null end
-    ] | map(select(. != null))) as $durations |
-
-    ($durations | map(select(.font == $font) | .duration) | add // 0) as $usage |
-
-    ([range(0; $n) as $i |
-      if $applies[$i].font == $font and ($i == 0 or $applies[$i - 1].font != $font)
-      then 1 else 0 end
-    ] | add // 0) as $sessions |
-
-    ($applies | map(select(.font == $font)) | last) as $last |
+  get_history | jq -c --arg font "$font" --arg current "$current_font" --arg machine "$(get_machine_id)" "$_JQ_TIMELINE_DEFS"'
+    ([apply_spans($machine; $current) | select(.font == $font)]) as $spans |
+    ($spans | map(.seconds // 0) | add // 0) as $usage |
+    ($spans | map(select(.starts_session)) | length) as $sessions |
+    (map(select(.action == "apply" and .font == $font)) | last) as $last |
 
     {
       usage_seconds: $usage,
@@ -274,27 +279,10 @@ get_font_monthly_usage_map() {
   local current_font
   current_font=$(get_current_font 2>/dev/null || echo "")
 
-  get_history | jq -c --arg font "$font" --arg current "$current_font" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
-    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
-    ($applies | length) as $n |
-
-    [range(0; $n) as $i |
-      $applies[$i] as $a |
-      (if $i < ($n - 1) then (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))
-       elif $a.font == $current then ((now | floor) - ($a.ts | parse_ts))
-       else null end) as $dur |
-      if $dur == null then empty else {font: $a.font, month: $a.ts[0:7], dur: $dur} end
-    ]
-    | map(select(.font == $font))
+  get_history | jq -c --arg font "$font" --arg current "$current_font" --arg machine "$(get_machine_id)" "$_JQ_TIMELINE_DEFS"'
+    [apply_spans($machine; $current) | select(.font == $font and .seconds != null)]
     | group_by(.month)
-    | map({key: .[0].month, value: (map(.dur) | add)})
+    | map({key: .[0].month, value: (map(.seconds) | add)})
     | from_entries
   '
 }
@@ -329,14 +317,7 @@ get_stats_overview() {
   current_font=$(get_current_font 2>/dev/null || echo "")
   usage_map=$(calculate_usage_time "$current_font")
 
-  get_history | jq -c --argjson usage "$usage_map" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
+  get_history | jq -c --argjson usage "$usage_map" "$_JQ_TIMELINE_DEFS"'
     (group_by(.font)) as $byfont |
     (min_by(.ts).ts // null) as $first |
     (max_by(.ts).ts // null) as $last |
@@ -394,27 +375,11 @@ get_stats_machine_favorites() {
   local current_font
   current_font=$(get_current_font 2>/dev/null || echo "")
 
-  get_history | jq -c --arg current "$current_font" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
-    (map(select(.action == "apply")) | sort_by(.ts)) as $applies |
-    ($applies | length) as $n |
-
-    [range(0; $n) as $i |
-      $applies[$i] as $a |
-      (if $i < ($n - 1) then (($applies[$i + 1].ts | parse_ts) - ($a.ts | parse_ts))
-       elif $a.font == $current then ((now | floor) - ($a.ts | parse_ts))
-       else null end) as $dur |
-      if $dur == null then empty else {machine: ($a.machine // "unknown"), font: $a.font, dur: $dur} end
-    ]
+  get_history | jq -c --arg current "$current_font" --arg machine "$(get_machine_id)" "$_JQ_TIMELINE_DEFS"'
+    [apply_spans($machine; $current) | select(.seconds != null) | .machine //= "unknown"]
     | group_by(.machine)
     | map(
-        (group_by(.font) | map({font: .[0].font, usage: (map(.dur) | add)}) | max_by(.usage)) as $top |
+        (group_by(.font) | map({font: .[0].font, usage: (map(.seconds) | add)}) | max_by(.usage)) as $top |
         {machine: .[0].machine, font: $top.font, usage: $top.usage}
       )
     | sort_by(-.usage)
@@ -454,14 +419,53 @@ get_rankings() {
   '
 }
 
-# The latest apply of each of the most recently applied fonts, newest first, as
-# one JSON array. unique_by would re-sort by font name, so the first sighting of
-# each font is kept by hand instead.
+# Each font's finished scheduled turns, one object per font. A turn starts at a
+# scheduled apply and ends at the next apply of another font on the same
+# machine, so a re-apply of the same font does not end it. The turn was kept when
+# that apply was the schedule's too, and switched when it was a hand apply. A
+# turn still running is left out.
+get_schedule_turns() {
+  get_history | jq -c "$_JQ_TIMELINE_DEFS"'
+    def median:
+      sort
+      | if length == 0 then null
+        elif length % 2 == 1 then .[length / 2 | floor]
+        else (.[length / 2 - 1] + .[length / 2]) / 2
+        end;
+
+    [
+      map(select(.action == "apply")) | group_by(.machine)[] | sort_by(.ts)
+      | . as $applies
+      | range(0; $applies | length) as $i
+      | select($applies[$i].trigger == "schedule")
+      | first(range($i + 1; $applies | length) | select($applies[.].font != $applies[$i].font)) as $end
+      | {
+          font: $applies[$i].font,
+          kept: ($applies[$end].trigger == "schedule"),
+          seconds: (($applies[$end].ts | parse_ts) - ($applies[$i].ts | parse_ts))
+        }
+    ]
+    | group_by(.font)
+    | map({
+        font: .[0].font,
+        turns: length,
+        kept: (map(select(.kept)) | length),
+        switched: (map(select(.kept | not)) | length),
+        median_switch_seconds: (map(select(.kept | not) | .seconds) | median)
+      })
+    | .[]
+  '
+}
+
+# The latest apply of each font this machine applied most recently, newest
+# first, as one JSON array. Another machine's apply never reached this screen,
+# so `font last` never returns to it. unique_by would re-sort by font name, so
+# the first sighting of each font is kept by hand instead.
 get_recently_used() {
   local limit="${1:-10}"
 
-  get_history | jq -c --argjson limit "$limit" '
-    map(select(.action == "apply")) |
+  get_history | jq -c --argjson limit "$limit" --arg machine "$(get_machine_id)" '
+    map(select(.action == "apply" and .machine == $machine)) |
     sort_by(.ts) | reverse |
     reduce .[] as $apply ([];
       if any(.[]; .font == $apply.font) then . else . + [$apply] end) |
@@ -469,11 +473,19 @@ get_recently_used() {
   '
 }
 
+# This machine's latest apply, as one history row, or nothing.
+get_machine_last_apply() {
+  get_history | jq -c --arg machine "$(get_machine_id)" \
+    'map(select(.action == "apply" and .machine == $machine)) | last // empty'
+}
+
+# The latest apply of a font made from a terminal. A scheduled apply has none to
+# describe.
 get_last_terminal_context() {
   local font="$1"
 
   get_history | jq --arg font "$font" '
-    map(select(.font == $font and .action == "apply")) |
+    map(select(.font == $font and .action == "apply" and .terminal != null)) |
     sort_by(.ts) | last // {}
   '
 }
@@ -572,14 +584,7 @@ compute_font_weights() {
   get_history | jq -r \
     --argjson names "$names_json" \
     --argjson scale "$FONT_RECENCY_SCALE_DAYS" \
-    --argjson cap "$FONT_RECENCY_CAP_DAYS" '
-    def parse_ts:
-      if test("[+-][0-9]{2}:[0-9]{2}$") then
-        gsub("[+-][0-9]{2}:[0-9]{2}$"; "Z") | fromdateiso8601
-      else
-        fromdateiso8601
-      end;
-
+    --argjson cap "$FONT_RECENCY_CAP_DAYS" "$_JQ_TIMELINE_DEFS"'
     (now) as $now |
     (
       map(select(.action == "apply")) |

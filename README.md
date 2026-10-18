@@ -78,8 +78,10 @@ The include lines are the one edit your config needs. Any font command creates e
 is missing, naming `monospace` at size 17. The leading `?` tells Ghostty that a missing file is not
 an error. Waybar, Hyprlock and dunst on Arch take their own lines, listed under `apply` below.
 
-`apply` signals Kitty and Waybar to reload, and stops dunst so it reads the drop-in when it next
-starts. For the rest, `apply` prints a reminder to restart the terminal.
+`apply` reloads Kitty, and Ghostty on Linux, so their open windows redraw in the new font. It
+restarts Waybar, and stops dunst so it reads the drop-in when it next starts. Waybar is restarted
+rather than signaled, because Waybar's mpris module can crash on its reload signal. Ghostty on macOS
+shows the font after a config reload or in a new window, and `apply` says so there.
 
 Every verb answers `font <verb> --help` with its own synopsis. `font help` lists them all.
 
@@ -112,15 +114,19 @@ Terminal is the exception, and its `settings.json` is edited in place with a bac
 Every action appends one record to the history, carrying the context it happened in:
 
 ```json
-{"terminal":"ghostty","machine":"laptop","platform":"macos","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17,"ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply"}
+{"terminal":"ghostty","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17,"machine":"laptop","platform":"macos","ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply","trigger":"manual"}
 ```
+
+An apply's `trigger` says who made it: `manual` for one you typed, `schedule` for one the timer
+made. A row with no `trigger` predates the field and was applied by hand. A scheduled apply runs
+with no terminal, so its row carries the machine, platform, time, font and trigger and nothing else.
 
 `random` draws from the curated families, minus the rejected ones and the font already on screen.
 A font's weight grows with the days since it was last applied, up to a cap, and a font never applied
 starts at the cap. Apply count is the wrong axis. Counts bunch together and separate nothing, and a
 font added at zero applies would be the only thing a count-based draw returned until it caught up.
 
-`last` toggles between the two fonts most recently applied in the history.
+`last` toggles between the two fonts most recently applied on this machine.
 
 ## `like`, `dislike`, `note`, `reject` — opinions about the font on screen, in the same log
 
@@ -152,7 +158,7 @@ font: `font current` and `font info` render its history, rejection reason includ
 ```bash
 font current   # this terminal's font: description, history, stats and a 12-month usage sparkline
 font info      # the same page for any curated font, chosen in fzf
-font rank      # two rankings, one by likes and one by hours used
+font rank      # one ranking by likes and one by hours used, then each font's scheduled turns
 font stats     # where the two signals disagree, how fast you try fonts, each machine's favorite
 font log       # every record, with the machine and terminal it came from
 ```
@@ -161,11 +167,15 @@ font keeps two signals and never blends them:
 
 - **Stated preference** is likes minus dislikes.
 - **Revealed preference** is how long each font was active. It is reconstructed from the gap
-  between consecutive `apply` records, and the font on screen counts up to now. A gap runs to the
-  next apply in the merged history, whichever machine made it.
+  between consecutive `apply` records on the same machine, and the font on screen counts up to
+  now. Another machine's apply says nothing about this screen, so it ends nothing here. Another
+  machine's latest apply counts for nothing until that machine applies again, since nothing here
+  knows when it ended.
 
 `font rank` shows the two as separate lists, because a font you keep reaching for is a different
-signal from one you liked once. Both lists rank only curated fonts that are not rejected.
+signal from one you liked once. Both lists rank only curated fonts that are not rejected. Under
+them, the fonts the schedule has applied show how often each kept the screen until the next
+scheduled change.
 `font stats` reads the whole history: fonts used more than average but never rated, fonts liked
 but used less than average, how many fonts you first tried each month, and the most-used font on
 each machine.
@@ -194,12 +204,71 @@ it. With one writer per file, deleting a row you wrote is an ordinary edit to th
 and no other machine can put it back. Merged rows are deduplicated on timestamp, machine, font and
 action, then sorted by time.
 
+## `schedule` — a timer changes the font while you are at the machine
+
+```bash
+font schedule on       # install the timer: a systemd user timer on Linux, a launchd agent on macOS
+font schedule status   # whether it is on, the font on screen, when the next change is due, the last check
+font schedule off      # remove the timer
+font schedule run      # one check, which is what the timer runs
+```
+
+The timer checks every five minutes. A font the schedule applied keeps the screen for six hours, and
+one you applied by hand keeps it for twelve. A due change waits until you are at the machine, so it
+lands while you are using it. On macOS that means input within the last ten minutes. On Linux it
+means logind marks your display session neither idle nor locked. The draw is `font random`'s.
+
+Every scheduled apply is logged with `"trigger":"schedule"`. So the history shows which fonts you
+switched away from and which stayed on until the timer replaced them. `font rank` counts both for
+each font under `SCHEDULED TURNS`:
+
+```text
+SCHEDULED TURNS
+ 1. Hack Nerd Font                   1/1 kept   0 switched
+ 2. Iosevka Term Slab Nerd Font      1/2 kept   1 switched after 1h 30m
+ 3. JetBrains Mono Nerd Font         0/1 kept   1 switched after 20m
+```
+
+A turn starts at a scheduled apply and ends at the next apply of another font on the same machine.
+It was kept when the schedule made that apply, and switched when you did. Re-applying the same font
+ends nothing, and a turn still running is not counted.
+
+hypridle does not set logind's idle hint by itself. This listener in `hypridle.conf` does:
+
+```text
+listener {
+    timeout = 600
+    on-timeout = busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint b true
+    on-resume = busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint b false
+}
+```
+
+On Linux the timer runs in the systemd user manager, which carries only the environment your session
+gave it. A change needs `WAYLAND_DISPLAY` or `DISPLAY`, and under Hyprland its
+`HYPRLAND_INSTANCE_SIGNATURE`. Without them a check is recorded as blocked and changes nothing. A
+session that does not export them runs this at login:
+
+```bash
+systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE
+```
+
+`on` writes `~/.config/systemd/user/font-schedule.service` and `.timer`, or
+`~/Library/LaunchAgents/com.datapointchris.font-schedule.plist`. Each check records its outcome in
+`schedule.json`: waiting, away, blocked, applied or failed. A check counts as applied only when the
+history holds the row the apply wrote, whatever the apply's exit status. `status` warns when no
+check has run for three check intervals.
+
+A scheduled change redraws open Kitty windows, and open Ghostty windows on Linux. On macOS Ghostty
+shows it after a config reload or in a new window, the same as a font applied by hand. WSL has no
+display session to read, so the schedule does not run there.
+
 ## Where it writes — one history file, merged from every machine
 
 ```text
 ~/.local/state/font/
 ├── history.jsonl      # the action log, one JSON record per line, merged from every machine
-└── sync-state.json    # gist id, last sync time, whether sync is on
+├── sync-state.json    # gist id, last sync time, whether sync is on
+└── schedule.json      # the outcome of the last scheduled check
 ```
 
 A deleted history file is recreated empty by the next command. A font name recorded under an older

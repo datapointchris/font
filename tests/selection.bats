@@ -49,15 +49,6 @@ at_days_offset() {
   assert_output "Unseen Mono	$((1 + FONT_RECENCY_CAP_DAYS / FONT_RECENCY_SCALE_DAYS))"
 }
 
-@test "compute_font_weights carries a name containing spaces through intact" {
-  # Every managed font is named with spaces, and the pipe into the picker is
-  # tab-separated for exactly that reason.
-  add_history_record "2020-01-01T00:00:00Z" "Iosevka Term Slab Nerd Font" apply
-
-  run pipeline 'echo "Iosevka Term Slab Nerd Font" | compute_font_weights | cut -f1'
-  assert_output "Iosevka Term Slab Nerd Font"
-}
-
 @test "compute_font_weights weighs a long-unused font above a recent one" {
   add_history_record "2020-01-01T00:00:00Z" "Stale Mono" apply
   add_history_record "$(at_days_offset 0)" "Fresh Mono" apply
@@ -119,13 +110,17 @@ at_days_offset() {
   assert_output "yes"
 }
 
-@test "get_recently_used lists each font once, newest apply first" {
+@test "get_recently_used lists each font this machine applied once, newest first, past a synced machine's later apply" {
   # `font last` toggles between the first two. Alphabetical order would put
-  # Newer Mono first, which is the order a name-keyed dedupe leaves behind.
-  add_history_record "2025-01-01T00:00:00Z" "Older Mono" apply
-  add_history_record "2025-01-02T00:00:00Z" "Newer Mono" apply
-  add_history_record "2025-01-03T00:00:00Z" "Older Mono" apply
-  add_history_record "2025-01-04T00:00:00Z" "Newest Mono" apply
+  # Newer Mono first, which is the order a name-keyed dedupe leaves behind. A
+  # synced row from another machine's schedule never reached this screen.
+  local here
+  here=$(get_machine_id)
+  add_history_record "2025-01-01T00:00:00Z" "Older Mono" apply "" "$here"
+  add_history_record "2025-01-02T00:00:00Z" "Newer Mono" apply "" "$here"
+  add_history_record "2025-01-03T00:00:00Z" "Older Mono" apply "" "$here"
+  add_history_record "2025-01-04T00:00:00Z" "Newest Mono" apply "" "$here"
+  add_history_record "2025-01-05T00:00:00Z" "Elsewhere Mono" apply "" "elsewhere"
 
   run pipeline "get_recently_used 2 | jq -r '.[].font'"
   assert_success

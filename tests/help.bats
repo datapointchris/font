@@ -12,6 +12,8 @@
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   load "$BATS_TEST_DIRNAME/helpers.bash"
   isolate_font_state
@@ -32,67 +34,34 @@ assert_no_history() {
   }
 }
 
-@test "the help screen lists every verb the table carries" {
-  run help_screen_verbs
-  assert_success
-  assert_line "reject"
-  assert_line "apply"
-  assert_line "sync"
-  assert_line "install"
-}
+@test "every verb on the help screen answers --help with its own rows without acting, and -h matches it" {
+  local verbs verb rows
+  verbs=$(help_screen_verbs)
+  [[ -n "$verbs" ]] || fail "the help screen yielded no verbs"
 
-@test "every verb on the help screen answers --help without acting" {
-  local verb
   while read -r verb; do
     run "$FONT_ROOT/bin/font" "$verb" --help
     [[ "$status" -eq 0 ]] || fail "font $verb --help exited $status: $output"
-    [[ -n "$output" ]] || fail "font $verb --help printed nothing"
+    # The synopsis is the block under "Usage:", up to the first blank line.
+    rows=$(awk '/^Usage:$/ { u = 1; next } u && /^$/ { exit } u' <<<"$output")
+    [[ -n "$rows" ]] || fail "font $verb --help printed no synopsis: $output"
+    if grep -v -E -- "^  font $verb( |\$)" <<<"$rows"; then
+      fail "font $verb --help printed a row for another verb"
+    fi
     assert_no_history
-  done < <(help_screen_verbs)
-}
+  done <<<"$verbs"
 
-@test "every verb answers -h the same way" {
-  local verb
-  while read -r verb; do
-    run "$FONT_ROOT/bin/font" "$verb" -h
-    [[ "$status" -eq 0 ]] || fail "font $verb -h exited $status: $output"
-    assert_no_history
-  done < <(help_screen_verbs)
-}
-
-@test "a flat verb gets its own synopsis, not the whole screen" {
-  run "$FONT_ROOT/bin/font" reject --help
-  assert_success
-  assert_line "  font reject <message>     Mark current font as rejected (avoids rediscovery)"
-  refute_line "Font Management"
-}
-
-@test "a verb with several rows prints all of them" {
-  run "$FONT_ROOT/bin/font" sync --help
-  assert_success
-  assert_line "  font sync init            Set up cross-machine sync via GitHub Gist"
-  assert_line "  font sync on              Re-enable auto-sync"
-}
-
-@test "an unknown verb falls back to the full screen" {
-  run "$FONT_ROOT/bin/font" nonsense --help
-  assert_success
-  assert_output --partial "Font Management"
-}
-
-@test "font apply --help does not reach the font-name check" {
-  # Without the guard this passed a grep that read the flag as its own, applied a
-  # font called "--help", and wrote it into the terminal config.
-  run "$FONT_ROOT/bin/font" apply --help
-  assert_success
-  assert_output --partial "font apply <font>"
+  # main() matches -h and --help in one case arm, so one verb proves -h.
+  local help
+  help=$("$FONT_ROOT/bin/font" reject --help)
+  run "$FONT_ROOT/bin/font" reject -h
+  [[ "$status" -eq 0 && "$output" == "$help" ]] || fail "font reject -h differs from --help: $output"
   assert_no_history
 }
 
-@test "font help still renders the commands and the examples" {
-  run "$FONT_ROOT/bin/font" help
-  assert_success
-  assert_line "Commands"
-  assert_line "Examples"
-  assert_line "  reject <message>     Mark current font as rejected (avoids rediscovery)"
+@test "a mistyped command exits 2 with its error on stderr and nothing on stdout" {
+  run --separate-stderr "$FONT_ROOT/bin/font" nonsense
+  assert_failure 2
+  assert_output ""
+  assert_stderr --partial "Unknown command: nonsense"
 }

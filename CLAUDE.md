@@ -30,7 +30,17 @@ Three places got this wrong at once, and one help request tripped all three.
 - **`grep -F -- "$pattern"`.** Without the separator `grep -Fxq --help` prints grep's help and exits 0 on GNU grep, so `font apply --help` validated and applied a font named `--help`.
 - **Every verb answers `--help` before dispatch.** The rating verbs read their message as `"$*"`, so the flag became the reason and `font reject --help` hid a real font.
 
-`tests/flag-arguments.bats` pins all three.
+`tests/flag-arguments.bats` pins the first two, and `tests/help.bats` walks every verb's `--help`.
+
+## The schedule reads only this machine's apply rows
+
+`font schedule` decides from this machine's latest apply and its `trigger`: `schedule` earns a turn of `FONT_SCHEDULE_TURN_HOURS`, and `manual` or no trigger the longer `FONT_SCHEDULE_HOLD_HOURS`, both in `lib/schedule.sh`. A check's outcome is read off the history row the apply wrote, never its exit status.
+
+A timer run has no terminal. Its row carries machine and platform and no terminal fields, so the per-font page's terminal and size modes count only applies typed in a terminal. `random_font` falls back to this machine's latest apply for the font on screen, since `get_current_font` reads a terminal's file. Everything the apply restarts must leave the unit's cgroup, so waybar goes through `start_session_daemon` and the push runs in the foreground.
+
+`get_schedule_turns` ends a turn at the next apply of another font, because a re-apply of one font is not a new session. Another tool restarting waybar on the five-minute marks would race this one, and two restarts at one moment can leave two bars, so checks run two minutes later.
+
+A timer turned on in dev mode is its own unit, `font-schedule-dev`, so it never replaces or removes the installed copy's. It carries `FONT_ENV=development`, so it reads and writes `.dev-data`. Like any dev-mode apply, it still writes the real terminal configs.
 
 ## Tests are bats, at the top of `tests/`
 

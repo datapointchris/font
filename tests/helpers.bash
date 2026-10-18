@@ -29,9 +29,9 @@ isolate_font_state() {
   export XDG_LIB_HOME="$HOME/.local/lib"
 }
 
-# Sources the libraries the way bin/font does. terminal.sh pulls in lib.sh for
-# font_trim; the redundant order here mirrors the CLI so the source guard stays
-# covered.
+# Sources the libraries the way bin/font does. terminal.sh pulls in lib.sh and
+# storage.sh itself; the redundant order here mirrors the CLI so the source
+# guards stay covered.
 source_font_libs() {
   source "$FONT_ROOT/lib/lib.sh"
   source "$FONT_ROOT/lib/storage.sh"
@@ -77,6 +77,16 @@ add_history_record() {
     printf '{"ts":"%s","machine":"%s","terminal":"ghostty","font":"%s","action":"%s"}\n' \
       "$ts" "$machine" "$font" "$action" >>"$FONT_HISTORY_FILE"
   fi
+}
+
+# Appends one apply record carrying a trigger, "manual" or "schedule".
+#
+# Usage: add_apply_record <ts> <font> <trigger> [machine]
+add_apply_record() {
+  local ts="$1" font="$2" trigger="$3" machine="${4:-testbox}"
+  mkdir -p "$(dirname "$FONT_HISTORY_FILE")"
+  printf '{"ts":"%s","machine":"%s","font":"%s","action":"apply","trigger":"%s"}\n' \
+    "$ts" "$machine" "$font" "$trigger" >>"$FONT_HISTORY_FILE"
 }
 
 # Runs a pipeline in the shell the test is already in, so `run` can capture it.

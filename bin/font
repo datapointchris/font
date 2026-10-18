@@ -19,6 +19,7 @@ source "$FONT_APP_DIR/lib/lib.sh"
 source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
 source "$FONT_APP_DIR/lib/sync.sh"
+source "$FONT_APP_DIR/lib/schedule.sh"
 
 # Sourced if present rather than required, so every command but `font update`
 # runs without it. `font update` says how to get it; the notice simply does not
@@ -48,7 +49,7 @@ commands_table() {
   note <message>       Add note to current font (message required)
   random               Apply a random font, weighted by time since last use
   last                 Toggle to previously used font
-  rank                 Show fonts ranked by likes and by hours used
+  rank                 Show fonts ranked by likes and by hours, and their scheduled turns
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all curated font families
@@ -61,14 +62,20 @@ commands_table() {
   sync pull            Merge every other machine's rows in now
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
+  schedule on          Change the font on a timer while you are at the machine
+  schedule off         Remove the timer
+  schedule status      Show whether the schedule is on and when the next change is due
+  schedule run         Check once, and change the font if its turn is due (the timer runs this)
   install              Install curated fonts from GitHub Release
   install --check      Show which curated fonts are missing
   update               Update font to latest release
 EOF
 }
 
-# Answers `font <verb> --help`. Every row whose first word is the verb, so `sync`
-# prints its six and a plain verb prints its one.
+# Answers `font <verb> --help`. Every row whose first word is the verb, so a verb
+# with subcommands prints one row for each and a plain verb prints its own. A
+# verb whose rows cannot say how it behaves defines <verb>_help_details, which
+# prints under them.
 verb_usage() {
   local verb="$1"
   local rows
@@ -83,8 +90,51 @@ verb_usage() {
   while IFS= read -r row; do
     echo "  font ${row#  }"
   done <<<"$rows"
+  if declare -F "${verb}_help_details" &>/dev/null; then
+    echo ""
+    "${verb}_help_details"
+  fi
   echo ""
   echo "Every command: font help"
+}
+
+schedule_help_details() {
+  local idle_minutes=$((FONT_SCHEDULE_IDLE_SECONDS / 60))
+  local login1="busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint"
+  cat <<EOF
+How it decides:
+  A font the schedule applied keeps the terminal for $FONT_SCHEDULE_TURN_HOURS hours. One you applied
+  by hand keeps it for $FONT_SCHEDULE_HOLD_HOURS. A due change waits until you are at the machine, so
+  it lands while you use it. The timer checks every $FONT_SCHEDULE_CHECK_MINUTES minutes.
+
+  The draw is font random's: weighted toward the font you have gone longest
+  without, and never the one on screen. Open Kitty windows redraw in it, and
+  open Ghostty windows on Linux. On macOS Ghostty shows it after a config
+  reload or in a new window.
+
+  font rank counts each font's scheduled turns: kept until the next scheduled
+  change, or switched away from by hand. Re-applying the same font ends nothing.
+
+  Away on macOS means no input for $idle_minutes minutes. On Linux it means logind's
+  IdleHint or LockedHint is set for your display session. hypridle does not set
+  IdleHint by itself; this listener in hypridle.conf does:
+
+    listener {
+        timeout = $FONT_SCHEDULE_IDLE_SECONDS
+        on-timeout = $login1 b true
+        on-resume = $login1 b false
+    }
+
+  On Linux the timer runs in the systemd user manager. It needs the desktop's
+  WAYLAND_DISPLAY or DISPLAY, and under Hyprland its HYPRLAND_INSTANCE_SIGNATURE.
+  systemctl --user show-environment lists what the manager has. If your session
+  does not export them to it, run this at login:
+
+    systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE
+
+  font schedule status reports a check blocked without them. WSL has no display
+  session to read, so the schedule does not run there.
+EOF
 }
 
 usage() {
@@ -124,31 +174,45 @@ EOF
 # FONT OPERATIONS
 # ==============================================================================
 
+# Usage: apply_font_cmd <font> [trigger]
+# trigger is "manual" unless the schedule is applying, which sets "schedule".
 apply_font_cmd() {
   local font="$1"
+  local trigger="${2:-manual}"
 
   echo "Applying font: $font"
 
   local applied
   if applied=$(terminal_apply_font "$font"); then
-    log_action "apply" "$font"
-    sync_after_action
+    log_action "apply" "$font" "" "$trigger"
+    # A scheduled run pushes in the foreground itself, because its unit ends a
+    # backgrounded push.
+    [[ "$trigger" == "schedule" ]] || sync_after_action
     echo ""
     echo "Applied to: $applied"
-    echo ""
-    echo "Font applied! Restart terminal to see all changes."
+    print_manual_reload_hint
+    if schedule_is_on; then
+      schedule_next_change_line
+    fi
   else
     echo "Error: Failed to apply font" >&2
     return 1
   fi
 }
 
+# An apply reloads kitty, and Ghostty on Linux, and Windows Terminal reloads its
+# settings itself. Ghostty on macOS is the one terminal font cannot reload.
+print_manual_reload_hint() {
+  [[ "$(detect_platform)" == "macos" ]] || return 0
+  echo ""
+  echo "Ghostty shows it after a config reload or in a new window."
+}
+
 cmd_size_up() {
   local result
   if result=$(change_font_size 1); then
     echo "Font size: $result"
-    echo ""
-    echo "Restart terminal to see changes."
+    print_manual_reload_hint
   else
     return 1
   fi
@@ -158,8 +222,7 @@ cmd_size_down() {
   local result
   if result=$(change_font_size -1); then
     echo "Font size: $result"
-    echo ""
-    echo "Restart terminal to see changes."
+    print_manual_reload_hint
   else
     return 1
   fi
@@ -199,17 +262,16 @@ mark_disliked() {
 
 add_note() {
   local message="$*"
-  local font
-  font=$(get_current_font)
-
-  if [[ "$font" == "Unknown" ]]; then
-    terminal_unknown_error
-    exit 1
+  if [[ -z "$message" ]]; then
+    echo "Error: Note message required" >&2
+    verb_usage note >&2
+    exit 2
   fi
 
-  if [[ -z "$message" ]]; then
-    echo "Error: Note message required"
-    echo "Usage: font note <message>"
+  local font
+  font=$(get_current_font)
+  if [[ "$font" == "Unknown" ]]; then
+    terminal_unknown_error
     exit 1
   fi
 
@@ -221,17 +283,16 @@ add_note() {
 
 mark_rejected() {
   local reason="$*"
-  local font
-  font=$(get_current_font)
-
-  if [[ "$font" == "Unknown" ]]; then
-    terminal_unknown_error
-    exit 1
+  if [[ -z "$reason" ]]; then
+    echo "Error: Rejection reason required" >&2
+    verb_usage reject >&2
+    exit 2
   fi
 
-  if [[ -z "$reason" ]]; then
-    echo "Error: Rejection reason required"
-    echo "Usage: font reject <message>"
+  local font
+  font=$(get_current_font)
+  if [[ "$font" == "Unknown" ]]; then
+    terminal_unknown_error
     exit 1
   fi
 
@@ -485,6 +546,39 @@ _render_rank_section() {
   done <<<"$sorted"
 }
 
+# Finished scheduled turns per ranked font, most often kept first. Prints
+# nothing until the schedule has finished a turn.
+# Args: $1 rankings JSON array, $2 name width.
+_render_turns_section() {
+  local rankings="$1" name_width="$2"
+  local rows
+  rows=$(get_schedule_turns | jq -s -r --argjson r "$rankings" '
+    ($r | map(.font)) as $ranked
+    | map(select(.font as $f | ($ranked | index($f)) != null))
+    | sort_by(-(.kept / .turns), -.turns, .font)
+    | .[]
+    | [.font, .kept, .turns, .switched, (.median_switch_seconds | if . == null then "" else floor end)]
+    | @tsv')
+  [[ -z "$rows" ]] && return 0
+
+  local c_reset='\033[0m'
+  local c_blue='\033[0;34m'
+  echo ""
+  echo -e "${c_blue}SCHEDULED TURNS${c_reset}"
+
+  local rank=0 font kept turns switched median
+  while IFS=$'\t' read -r font kept turns switched median; do
+    rank=$((rank + 1))
+    if [[ ${#font} -gt $name_width ]]; then
+      font="${font:0:$((name_width - 3))}..."
+    fi
+    local after=""
+    [[ -n "$median" ]] && after=" after $(format_duration "$median")"
+    printf "%2d. %-${name_width}s  %7s kept  %2d switched%s\n" \
+      "$rank" "$font" "$kept/$turns" "$switched" "$after"
+  done <<<"$rows"
+}
+
 show_rankings() {
   # Restrict to fonts in the current registry, then rank the same set two ways.
   local available_json rankings count
@@ -512,6 +606,7 @@ show_rankings() {
 
   _render_rank_section "BY LIKES" "$rankings" likes "$name_width"
   _render_rank_section "BY HOURS USED" "$rankings" hours "$name_width"
+  _render_turns_section "$rankings" "$name_width"
   echo ""
 }
 
@@ -618,8 +713,7 @@ show_font_info() {
   local preview_script="/tmp/font-info-preview-$$.sh"
   cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
-source "$FONT_APP_DIR/lib/lib.sh"
-source "$FONT_APP_DIR/lib/storage.sh"
+source "$FONT_APP_DIR/lib/terminal.sh"
 font="\$1"
 display_font_details "\$font" "full"
 PREVIEW_EOF
@@ -667,17 +761,18 @@ show_log() {
   fi
   echo ""
 
+  # The third column is where the action came from: a terminal, or the schedule.
+  local lines
+  lines=$(echo "$history" | jq -r '
+    "\(.ts) | \(.machine // .platform) | \(.terminal // (if .trigger == "schedule" then "schedule" else "-" end)) | \(.action) | \(.font)" +
+    (if .message then " | \(.message)" else "" end)
+  ')
+
   # Format and display with color if bat is available
   if command -v bat &>/dev/null; then
-    echo "$history" | jq -r '
-      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
-      (if .message then " | \(.message)" else "" end)
-    ' | bat --plain --language=log --theme=base16
+    echo "$lines" | bat --plain --language=log --theme=base16
   else
-    echo "$history" | jq -r '
-      "\(.ts) | \(.machine // .platform) | \(.terminal // "-") | \(.action) | \(.font)" +
-      (if .message then " | \(.message)" else "" end)
-    '
+    echo "$lines"
   fi
 }
 
@@ -698,8 +793,7 @@ change_font() {
   local preview_script="/tmp/font-change-preview-$$.sh"
   cat >"$preview_script" <<PREVIEW_EOF
 #!/bin/bash
-source "$FONT_APP_DIR/lib/lib.sh"
-source "$FONT_APP_DIR/lib/storage.sh"
+source "$FONT_APP_DIR/lib/terminal.sh"
 display_font_details "\$1" "compact"
 PREVIEW_EOF
 
@@ -755,7 +849,9 @@ cmd_font_last() {
   apply_font_cmd "$target"
 }
 
+# Usage: random_font [trigger]
 random_font() {
+  local trigger="${1:-manual}"
   local candidates
   mapfile -t candidates < <(list_fonts_active)
 
@@ -765,9 +861,14 @@ random_font() {
   fi
 
   # Dropping the current font only when something else can be picked, so a
-  # single-font install still applies rather than erroring.
+  # single-font install still applies rather than erroring. With no terminal,
+  # which is how the schedule runs, there is no terminal file to read it from,
+  # so this machine's latest apply names it.
   local current
   current=$(get_current_font 2>/dev/null || echo "")
+  if [[ "$current" == "Unknown" ]]; then
+    current=$(get_machine_last_apply | jq -r '.font // empty')
+  fi
   if [[ -n "$current" ]] && [[ ${#candidates[@]} -gt 1 ]]; then
     local remaining=()
     local font
@@ -789,7 +890,7 @@ random_font() {
   echo "🎲 Randomly selected: $selected_font"
   echo "   (${#candidates[@]} fonts, weighted toward the least recently used)"
   echo ""
-  apply_font_cmd "$selected_font"
+  apply_font_cmd "$selected_font" "$trigger"
 }
 
 # ==============================================================================
@@ -964,10 +1065,11 @@ main() {
   #
   # Never fails and never prints an error; `font update` is where update
   # failures surface. The commands skipped here are the ones a check would be
-  # pointless or harmful in — version is what a script parses.
+  # pointless or harmful in — version is what a script parses, and the timer's
+  # run has nobody to read it.
   if declare -F bashselfupdate_notify &>/dev/null; then
-    case "${1:-}" in
-      update | --version | -v) ;;
+    case "${1:-} ${2:-}" in
+      "update "* | "--version "* | "-v "* | "schedule run") ;;
       *) bashselfupdate_notify font "$FONT_APP_DIR" ;;
     esac
   fi
@@ -1002,9 +1104,9 @@ main() {
       ;;
     apply)
       if [[ -z "${2:-}" ]]; then
-        echo "Error: Font name required"
-        usage
-        exit 1
+        echo "Error: Font name required" >&2
+        verb_usage apply >&2
+        exit 2
       fi
       # Validate font name against installed fonts.
       #
@@ -1014,17 +1116,19 @@ main() {
       local available_fonts
       available_fonts=$(list_fonts)
       if ! echo "$available_fonts" | grep -Fxq -- "$2"; then
-        echo "Error: Font '$2' not found"
-        echo ""
         local suggestions
-        suggestions=$(echo "$available_fonts" | grep -i "${2//[-_ ]/.*}" | head -5)
-        if [[ -n "$suggestions" ]]; then
-          echo "Did you mean:"
-          echo "  ${suggestions//$'\n'/$'\n'  }"
-        fi
-        echo ""
-        echo "Run 'font list' to see all available fonts."
-        exit 1
+        suggestions=$(echo "$available_fonts" | grep -i -- "${2//[-_ ]/.*}" | head -5 || true)
+        {
+          echo "Error: Font '$2' not found"
+          if [[ -n "$suggestions" ]]; then
+            echo ""
+            echo "Did you mean:"
+            echo "  ${suggestions//$'\n'/$'\n'  }"
+          fi
+          echo ""
+          echo "Run 'font list' to see all available fonts."
+        } >&2
+        exit 2
       fi
       apply_font_cmd "$2"
       ;;
@@ -1066,6 +1170,7 @@ main() {
       ;;
     sync)
       case "${2:-}" in
+        "") verb_usage sync ;;
         init)
           sync_init
           ;;
@@ -1097,8 +1202,23 @@ main() {
           sync_on
           ;;
         *)
-          echo "Usage: font sync <init|status|push|pull|on|off>"
-          exit 1
+          echo "Error: no such sync command '$2'" >&2
+          verb_usage sync >&2
+          exit 2
+          ;;
+      esac
+      ;;
+    schedule)
+      case "${2:-}" in
+        "") verb_usage schedule ;;
+        status) schedule_status ;;
+        on) schedule_on ;;
+        off) schedule_off ;;
+        run) schedule_run ;;
+        *)
+          echo "Error: no such schedule command '$2'" >&2
+          verb_usage schedule >&2
+          exit 2
           ;;
       esac
       ;;
@@ -1156,7 +1276,7 @@ main() {
       echo "Unknown command: $1" >&2
       echo "" >&2
       usage >&2
-      exit 1
+      exit 2
       ;;
   esac
 }

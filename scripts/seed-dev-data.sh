@@ -10,7 +10,9 @@
 # `platform` is its own field. Data is spread across ~11 months so the monthly
 # sparkline and the discovery timeline have something to show, and it includes
 # the two divergence cases (used-but-unrated, liked-but-unused) plus a rejected
-# font so `font stats` renders every section.
+# font so `font stats` renders every section. Two days of scheduled applies on
+# the arch box give `font rank` its scheduled turns. A hand apply carries no
+# trigger, the way every row written before the schedule reads.
 
 set -euo pipefail
 
@@ -35,6 +37,14 @@ emit() { # ts font action machine platform terminal size [message]
       in_tmux: true, cols: 120, rows: 40, resolution: "3840x2160",
       font_size: $size, ts: $ts, font: $font, action: $action
     } + (if $msg == "" then {} else {message: $msg} end)' >>"$HISTORY"
+}
+
+# emit_scheduled ts font machine platform
+# The schedule applies with no terminal attached, so its row carries none of a
+# terminal's fields.
+emit_scheduled() {
+  jq -nc --arg ts "$1" --arg font "$2" --arg machine "$3" --arg platform "$4" \
+    '{machine: $machine, platform: $platform, ts: $ts, font: $font, action: "apply", trigger: "schedule"}' >>"$HISTORY"
 }
 
 # seed_applies font machine platform terminal size  month:count ...
@@ -130,6 +140,15 @@ assert_managed "Comic Shanns Mono Nerd Font"
 seed_applies "Comic Shanns Mono Nerd Font" desktop macos ghostty 14 2026-04:2
 rate "Comic Shanns Mono Nerd Font" desktop macos ghostty 14 2026-04 dislike 2 "too playful"
 emit "2026-04-20T12:00:00Z" "Comic Shanns Mono Nerd Font" reject desktop macos ghostty 14 "too clownish for daily use"
+
+# The schedule on the arch box. Hack is kept until the next scheduled change,
+# JetBrains Mono is switched away from by hand, and Iosevka Term Slab is both.
+emit_scheduled "2026-08-01T08:00:00Z" "Hack Nerd Font" archlinux archlinux
+emit_scheduled "2026-08-01T14:00:00Z" "Iosevka Term Slab Nerd Font" archlinux archlinux
+emit "2026-08-01T15:30:00Z" "Hack Nerd Font" apply archlinux archlinux kitty 14
+emit_scheduled "2026-08-02T09:00:00Z" "Iosevka Term Slab Nerd Font" archlinux archlinux
+emit_scheduled "2026-08-02T15:00:00Z" "JetBrains Mono Nerd Font" archlinux archlinux
+emit "2026-08-02T15:20:00Z" "Hack Nerd Font" apply archlinux archlinux kitty 14
 
 # Sort chronologically (history is otherwise append-order; readers sort anyway).
 tmp="$(mktemp)"

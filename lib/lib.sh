@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Font sync library - modular, testable functions
-# Each function has a single responsibility and can be tested independently
+# The registry listing, the weighted draw, the duration formats and the per-font
+# page that `font current`, `font info` and the pickers render.
 
 set -euo pipefail
 
@@ -273,7 +273,7 @@ _render_font_history() {
     .action as $act |
     .ts[0:10] as $date |
     .message as $msg |
-    if $act == "apply" then "  \($date)  applied"
+    if $act == "apply" then (if .trigger == "schedule" then "  \($date)  applied by the schedule" else "  \($date)  applied" end)
     elif $act == "like" then (if $msg then "  \($date)  liked: \($msg)" else "  \($date)  liked" end)
     elif $act == "dislike" then (if $msg then "  \($date)  disliked: \($msg)" else "  \($date)  disliked" end)
     elif $act == "note" then "  \($date)  note: \($msg)"
@@ -477,26 +477,3 @@ display_font_details() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   fi
 }
-
-# ==============================================================================
-# PLATFORM DETECTION
-# ==============================================================================
-
-detect_platform() {
-  if [[ -n "${PLATFORM:-}" ]]; then
-    echo "$PLATFORM"
-    return
-  fi
-
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "macos"
-  elif [[ -f /proc/version ]] && grep -qi microsoft /proc/version; then
-    echo "wsl"
-  elif [[ -f /etc/arch-release ]]; then
-    echo "archlinux"
-  else
-    echo "linux"
-  fi
-}
-
-# Arch-specific font functions moved to lib/terminals/arch.sh

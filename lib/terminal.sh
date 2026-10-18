@@ -6,9 +6,11 @@ set -euo pipefail
 
 TERMINAL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# The backends read config values through font_trim, so this file cannot be
-# sourced without it. Guarded on its own end, so bin/font sourcing both is free.
+# The backends read config values through font_trim, and every platform branch
+# here reads detect_platform. Both files are guarded on their own end, so
+# bin/font sourcing them too is free.
 source "$TERMINAL_LIB_DIR/lib.sh"
+source "$TERMINAL_LIB_DIR/storage.sh"
 
 source "$TERMINAL_LIB_DIR/terminals/ghostty.sh"
 source "$TERMINAL_LIB_DIR/terminals/kitty.sh"
@@ -102,19 +104,6 @@ get_screen_resolution() {
       echo ""
       ;;
   esac
-}
-
-get_machine_id() {
-  # The physical machine's hostname, lowercased. Platform is recorded as its own
-  # field, so it does not belong here — prefixing it (the old "platform-host"
-  # format) both duplicated the platform and split one machine across records
-  # when the platform label changed (e.g. arch -> archlinux). Lowercasing keeps
-  # a host that reports "Laptop" and "laptop" as one machine.
-  local host
-  # uname -n is POSIX and works on macOS, Linux, BSDs
-  host=$(uname -n 2>/dev/null | cut -d. -f1 | tr '[:upper:]' '[:lower:]')
-  [[ -z "$host" ]] && host="unknown"
-  echo "$host"
 }
 
 get_current_font() {
@@ -230,24 +219,23 @@ change_font_size() {
   echo "$current_size → $new_size"
 }
 
+# What a history row records about the terminal an action was typed in. The
+# machine and platform come from log_action, which writes them on every row.
 get_terminal_context() {
   local terminal
   terminal=$(detect_terminal)
   local platform
   platform=$(detect_platform 2>/dev/null || echo "unknown")
 
-  local cols rows resolution font_size in_tmux machine
+  local cols rows resolution font_size in_tmux
   cols=$(get_terminal_cols)
   rows=$(get_terminal_rows)
   resolution=$(get_screen_resolution "$platform")
   font_size=$(get_current_font_size)
   in_tmux=$(detect_tmux)
-  machine=$(get_machine_id)
 
   jq -nc \
     --arg terminal "$terminal" \
-    --arg machine "$machine" \
-    --arg platform "$platform" \
     --argjson in_tmux "$in_tmux" \
     --arg cols "$cols" \
     --arg rows "$rows" \
@@ -255,8 +243,6 @@ get_terminal_context() {
     --arg font_size "$font_size" \
     '{
       terminal: $terminal,
-      machine: $machine,
-      platform: $platform,
       in_tmux: $in_tmux,
       cols: (if $cols == "" then null else ($cols | tonumber) end),
       rows: (if $rows == "" then null else ($rows | tonumber) end),
