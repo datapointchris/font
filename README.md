@@ -1,163 +1,216 @@
 # font
 
-Font testing and management with data-driven rankings. Every time you apply, like, dislike, note, or
-reject a font it is logged — and rankings emerge from your actual usage rather than opinion. A single
-`apply` updates every terminal on the machine at once (Ghostty, Kitty, Windows Terminal, plus
-Arch-specific apps), and an interactive picker shows each font's stats, history, and a usage
-sparkline as you browse.
+`font` sets the terminal font on every terminal on the machine at once. It logs every apply, like,
+dislike, note and rejection, and its rankings come out of that log. Which font you prefer is read
+from how long you kept each one, not only from what you said about it. Sync shares one history
+across machines through a GitHub Gist.
 
-## Features
+Each terminal keeps its own config. `font` owns one small file per app, holding the font family and
+size, and your config includes that file. Nothing else in your config is rewritten.
 
-- **Interactive picker** showing per-font stats, rank position, usage sparkline, and metadata (`fzf`)
-- **Usage tracking**: apply / like / dislike / note / reject, logged with full terminal context
-- **Data-driven rankings** — one list by likes, one by hours actually used
-- **Portfolio stats** — where stated and revealed preference diverge, discovery pace, per-machine favorites
-- **Multi-terminal apply**: one command writes Ghostty, Kitty, Windows Terminal (WSL), and Arch apps
-- **Cross-machine sync** via a private GitHub Gist
-- **Curated font installation** from a GitHub Release
-
-## Installation
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/datapointchris/font/main/install.sh | bash
 ```
 
-Or manually:
+Or from a clone, which runs the same installer without piping it:
 
 ```bash
 git clone https://github.com/datapointchris/font.git ~/.local/share/font
-ln -sf ~/.local/share/font/bin/font ~/.local/bin/font
+bash ~/.local/share/font/install.sh
 ```
 
-`font update` (or re-running `install.sh`) moves the checkout to the latest tagged release.
+The installer clones font into `~/.local/share/font`, moves it to its newest release tag, and links
+`~/.local/bin/font`. `FONT_INSTALL_DIR` and `FONT_BIN_DIR` move either path. It also clones
+[`bashselfupdate`](https://github.com/datapointchris/bashselfupdate) into `~/.local/lib`. A failure
+there is not fatal: every command still runs, and only `font update` and the update notice need it.
+Re-running the installer moves an existing checkout to the newest tag rather than cloning again.
+
+`font update` moves the checkout to the newest release tag. It refuses a checkout that is not
+sitting on a tag, because that is a development clone and git is the tool for moving it.
 
 font also checks once a day and prints one line when a newer release exists:
 
 ```text
-font v3.2.0 available (running v3.1.0) — run `font update`
+font <newer> available (running <current>) — run `font update`
 ```
 
-It never installs anything and never prints an error — a failed check is
-recorded and swallowed, because an update notice must not break the command you
-typed. Nothing is printed when either stream is not a terminal, under CI, from a
-checkout that is not sitting on a release tag, or within the interval. Set
-`NO_AUTO_UPDATE` or `FONT_NO_AUTO_UPDATE` to turn it off, and
+It never installs anything and never prints an error. A failed check is recorded and swallowed,
+because an update notice must not break the command you typed. Nothing is printed when either
+stream is not a terminal, under CI, from a checkout that is not sitting on a release tag, or within
+the interval. Set `NO_AUTO_UPDATE` or `FONT_NO_AUTO_UPDATE` to turn it off, and
 `FONT_AUTO_UPDATE_INTERVAL=6h` to change the cadence.
 
 ### Requirements
 
-- `jq` — JSON history/ranking processing
-- `fzf` — interactive picker
-- `git` — version reporting and `font update`
-- [`bashselfupdate`](https://github.com/datapointchris/bashselfupdate) — `font update` and the
-  daily notice; `install.sh` installs it
-- `gh` — GitHub CLI (sync and curated-font install)
-- `bat` *(optional)* — colorizes `font log` output when present
+- `bash` 4 or newer. On macOS that means Homebrew's, since the system bash is 3.2.
+- `jq` — every read of the history and the registry
+- `fzf` — `change`, `info` and `unreject`
+- `git` — the installer, version reporting and `font update`
+- `python3` — resolves the `~/.local/bin/font` link back to the checkout
+- `gh` — `font install` downloads through it, and `font sync` stores history with it
+- `bashselfupdate` — `font update` and the daily notice; the installer installs it
+- fontconfig — `font install` refreshes the font cache on Linux and WSL
+- `bat` *(optional)* — colorizes `font log`
 
-## Usage
-
-### Viewing
-
-```bash
-font current              # Show the active font with its full stats
-font info                 # Browse fonts and view detailed history (fzf)
-font list                 # List all curated font families
-font list --status <s>    # Narrow to one state: active, rejected, all
-font rank                 # Two rankings: by likes and by hours used
-font stats                # Portfolio dashboard (divergence, discovery, machines)
-font log                  # Complete history with terminal context
-```
-
-### Applying
+## Starting from scratch
 
 ```bash
-font change               # Interactive picker (rich per-font preview)
-font apply <font>         # Apply a font by name (auto-logs)
-font random               # Apply a random font, weighted by time since last use
-font last                 # Toggle back to the previous font
-font size-up              # Increase font size by 1 (all terminals)
-font size-down            # Decrease font size by 1 (all terminals)
+curl -fsSL https://raw.githubusercontent.com/datapointchris/font/main/install.sh | bash  # font, at its newest release
+gh auth login                  # install downloads through gh, and sync keeps history on your account
+font install --check           # which curated families this machine already has; installs nothing
+font install                   # unpack the curated archive into your user font directory
+
+echo 'include fonts/current.conf' >>~/.config/kitty/kitty.conf          # kitty reads font's file
+echo 'config-file = ?fonts/current.conf' >>~/.config/ghostty/config     # ghostty reads it too
+echo 'gtk-custom-css = ?fonts/current.css' >>~/.config/ghostty/config   # and its tab labels, on Linux
+
+font change                    # pick a font in fzf and apply it, each one's record previewed beside it
+font current                   # the font this terminal's file names, with its record — proof it landed
 ```
 
-`apply`, `change`, `random`, and `last` all write **every** terminal config on the machine — Ghostty,
-Kitty, Windows Terminal (on WSL), and waybar / hyprlock / dunst on Arch — then log the change with the
-terminal, machine, size, and screen context it was applied in. Restart the terminal to see all changes.
+`font install` uses `~/fonts.tar.xz` when one exists and downloads nothing. That is the route for a
+machine that cannot reach GitHub. Otherwise it downloads `fonts.tar.xz` from this repository's
+`fonts-v1` release. It unpacks into `~/Library/Fonts` on macOS and `~/.local/share/fonts` on Linux.
+On WSL it unpacks into the Windows user's font directory and registers each font with Windows.
 
-### Tracking
+The include lines are the one edit your config needs. Any font command creates either file when it
+is missing, naming `monospace` at size 17. The leading `?` tells Ghostty that a missing file is not
+an error. Waybar, Hyprlock and dunst on Arch take their own lines, listed under `apply` below.
+
+`apply` signals Kitty and Waybar to reload, and stops dunst so it reads the drop-in when it next
+starts. For the rest, `apply` prints a reminder to restart the terminal.
+
+Every verb answers `font <verb> --help` with its own synopsis. `font help` lists them all.
+
+## `apply`, `change`, `random`, `last` — one font written to every app at once, and logged
 
 ```bash
-font like [message]       # Like the current font, optional reason
-font dislike [message]    # Dislike the current font, optional reason
-font note <message>       # Add a note to the current font (message required)
-font reject <message>     # Reject a font so it stops resurfacing (reason required)
-font unreject             # Restore a rejected font (fzf picker with history)
+font apply "Fira Code Nerd Font"   # by name; an unknown name lists the curated names that contain it
+font change                        # the fzf picker
+font random                        # weighted toward the font you have gone longest without
+font last                          # back to the font applied before this one
+font size-up                       # one point larger in every terminal; size-down is the reverse
 ```
 
-Rejection is a state rather than a command of its own, so the rejected families read as `font list
---status rejected`. The flag takes `active`, `rejected` or `all`, and defaults to `all` — the
-curated registry is small enough that both halves stay worth seeing, and `font apply` accepts every
-name in it. Why a particular font sits where it does reads per font: `font current` and `font info`
-render its history, rejection reason included.
+Each apply writes every app below that is present, whichever terminal you typed it in:
 
-### Sync (cross-machine)
+| App | font writes | Your config adds |
+| --- | --- | --- |
+| Ghostty | `~/.config/ghostty/fonts/current.conf`, and `current.css` beside it | `config-file = ?fonts/current.conf` and `gtk-custom-css = ?fonts/current.css` |
+| Kitty | `~/.config/kitty/fonts/current.conf` | `include fonts/current.conf` |
+| Windows Terminal, on WSL | its `settings.json`, after copying it to `settings.json.backup` | nothing |
+| Waybar, on Arch | `~/.config/waybar/fonts/current.css` | `@import "fonts/current.css";` in `style.css` |
+| Hyprlock, on Arch | `~/.config/hypr/fonts/current.conf` | `source = ~/.config/hypr/fonts/current.conf`, then `font_family = $font` |
+| dunst, on Arch | `~/.config/dunst/dunstrc.d/99-font.conf` | nothing, since it is a drop-in |
 
-```bash
-font sync init            # Set up sync via a private GitHub Gist
-font sync status          # Show sync status
-font sync push            # Force push local history to the gist
-font sync pull            # Force pull and merge from the gist
-font sync on | off        # Enable / disable auto-sync
-```
+The Ghostty and Kitty files are written whether or not either terminal is installed. The Arch apps
+are written only when their config directory exists. An include file keeps a config you track in
+version control clean: font rewrites its own file whole and edits nothing around it. Windows
+Terminal is the exception, and its `settings.json` is edited in place with a backup beside it.
 
-### Maintenance
-
-```bash
-font install              # Install curated fonts from the GitHub Release
-font install --check      # Show which curated fonts are missing
-font update               # Update font to the latest release
-```
-
-## How it works
-
-Each tracking action appends one timestamped JSON record (UTC) to a single history file, capturing the
-terminal context it happened in:
+Every action appends one record to the history, carrying the context it happened in:
 
 ```json
-{"ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply","terminal":"ghostty","machine":"macmini","platform":"macos","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17}
+{"terminal":"ghostty","machine":"laptop","platform":"macos","in_tmux":false,"cols":212,"rows":58,"resolution":"3440x1440","font_size":17,"ts":"2026-01-04T17:24:03Z","font":"Fira Code Nerd Font","action":"apply"}
 ```
 
-The tool tracks two kinds of signal and keeps them separate rather than blending them:
+`random` draws from the curated families, minus the rejected ones and the font already on screen.
+A font's weight grows with the days since it was last applied, up to a cap, and a font never applied
+starts at the cap. Apply count is the wrong axis. Counts bunch together and separate nothing, and a
+font added at zero applies would be the only thing a count-based draw returned until it caught up.
 
-- **Stated preference** — likes and dislikes, aggregated into a score (`likes − dislikes`).
-- **Revealed preference** — how long each font was actually active, reconstructed by diffing
-  consecutive `apply` timestamps (the current font counts up to now).
+`last` toggles between the two fonts most recently applied in the history.
 
-`font rank` shows both as separate lists — one **by likes**, one **by hours used** — because a font you
-keep reaching for is a different signal than one you clicked "like" on once. `font stats` is a portfolio
-dashboard built on the same data: where the two signals diverge (used a lot but never rated, or liked
-but rarely used), how many new fonts you try each month, and your most-used font on each machine.
+## `like`, `dislike`, `note`, `reject` — opinions about the font on screen, in the same log
 
-Rejection is itself just a logged action. `reject` and `unreject` append to the same history, and a
-font counts as rejected when `reject` is its most recent of the two — so rejected fonts drop out of
-`font list`, the picker, and the rankings without a separate state file to keep in sync.
+```bash
+font like "great ligatures"      # the reason is optional
+font dislike "too wide"
+font note "good for prose"       # a note needs its message
+font reject "zero has no slash"  # out of random and the rankings; the reason is required
+font unreject                    # pick a rejected font in fzf, its history beside it
+font list --status rejected      # the rejected families; active and all are the other two states
+```
 
-## Data and sync
+These act on the font of the terminal you type them in, read from that terminal's own file. font
+knows Ghostty, Kitty and Windows Terminal by their environment variables. In any other terminal
+there is no current font, and these four refuse.
 
-History lives in a single file under `~/.local/state/font/`:
+Rejection is a logged action, not a separate list. A font is rejected when `reject` is the later of
+its `reject` and `unreject` records, so there is no second file to keep in step. A rejected font
+leaves `font random` and both rankings. It stays in `font list`, `change`, `info` and `font apply`,
+so it is never unreachable.
+
+`font list --status` takes `active`, `rejected` or `all`, and defaults to `all`. The curated set is
+small enough that both halves stay worth seeing. `font apply` accepts every name in it, so a
+narrower default would hide a name the tool still takes. Why a font sits where it does reads per
+font: `font current` and `font info` render its history, rejection reason included.
+
+## `rank`, `stats`, `current`, `info`, `log` — what you said and what you used, kept apart
+
+```bash
+font current   # this terminal's font: description, history, stats and a 12-month usage sparkline
+font info      # the same page for any curated font, chosen in fzf
+font rank      # two rankings, one by likes and one by hours used
+font stats     # where the two signals disagree, how fast you try fonts, each machine's favorite
+font log       # every record, with the machine and terminal it came from
+```
+
+font keeps two signals and never blends them:
+
+- **Stated preference** is likes minus dislikes.
+- **Revealed preference** is how long each font was active. It is reconstructed from the gap
+  between consecutive `apply` records, and the font on screen counts up to now. A gap runs to the
+  next apply in the merged history, whichever machine made it.
+
+`font rank` shows the two as separate lists, because a font you keep reaching for is a different
+signal from one you liked once. Both lists rank only curated fonts that are not rejected.
+`font stats` reads the whole history: fonts used more than average but never rated, fonts liked
+but used less than average, how many fonts you first tried each month, and the most-used font on
+each machine.
+
+## `sync` — one history across machines, each machine writing only its own file
+
+```bash
+font sync init     # find the gist by its description, or create a secret one; run once per machine
+font sync status   # whether sync is on, the gist id, the last sync, whether gh is signed in
+font sync pull     # merge every other machine's rows in now
+font sync push     # pull, then upload this machine's rows now
+font sync off      # stop syncing; sync on resumes it and syncs at once
+```
+
+Sync runs by itself once initialized. Every logged action pushes in the background, and `change`
+and `info` pull before they open. `init` looks for a gist described as `font-preferences`, so a
+second machine joins the first one's history rather than starting its own. The gist it creates is
+secret: unlisted, but readable by anyone holding its URL. Each record carries a hostname, a terminal
+and a screen resolution.
+
+The gist holds one file per machine, `history-<host>.jsonl`, named for the lowercased short
+hostname. Each machine writes only its own file. A pull takes every other machine's file as it
+stands, and takes this machine's rows from the local history. A union of every machine's rows
+cannot express a deletion: a row removed on one machine comes back from the next one still holding
+it. With one writer per file, deleting a row you wrote is an ordinary edit to the local history,
+and no other machine can put it back. Merged rows are deduplicated on timestamp, machine, font and
+action, then sorted by time.
+
+## Where it writes — one history file, merged from every machine
 
 ```text
 ~/.local/state/font/
-├── history.jsonl      # append-only action log (one JSON record per line)
-└── sync-state.json    # gist id, last-sync time, enabled flag
+├── history.jsonl      # the action log, one JSON record per line, merged from every machine
+└── sync-state.json    # gist id, last sync time, whether sync is on
 ```
 
-The curated font families and their metadata (description, creator, license, links) live in the repo at
-`data/font-registry.json`; only families flagged `managed` appear in `font list`, the picker, and
-`font install`.
+A deleted history file is recreated empty by the next command. A font name recorded under an older
+spelling is read under the name the registry uses.
 
-`font sync` mirrors `history.jsonl` through a private GitHub Gist. Because every record carries its own
-machine and timestamp, pulling merges the two streams by deduplicating on `ts + machine + font + action`
-and re-sorting by time — so concurrent edits from different machines combine cleanly with no manual
-conflict resolution. Legacy font names are normalized on read, and a deleted history file is recreated
-on next use. In this repo, `FONT_ENV=development` (set via direnv) redirects all of the above to a
-gitignored `.dev-data/` fixture and disables sync, so testing never touches real history.
+The curated families and their metadata live in the checkout at `data/font-registry.json`: a
+description, creator, year, license and URL for each. Only families marked `managed` appear in
+`font list`, the pickers, the rankings and `font install --check`. `font list` prints them.
+
+`FONT_ENV=development` moves all of the state above into a gitignored `.dev-data/` inside the
+checkout and turns sync off, so working on font never touches real history. The repository's
+`.envrc` sets it through direnv. `scripts/seed-dev-data.sh` fills `.dev-data/` with a realistic
+fixture. `bats tests/` runs the suite, and every test points `HOME` at a temporary directory.
