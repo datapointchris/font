@@ -504,23 +504,14 @@ unreject_font() {
 get_rejected_font_info() {
   local font="$1"
 
-  if [[ ! -f "$FONT_HISTORY_FILE" ]]; then
-    echo "{}"
-    return
-  fi
-
-  jq -s --arg font "$font" '
+  get_history | jq --arg font "$font" '
     map(select(.font == $font and .action == "reject")) |
-    sort_by(.ts) | last // {}
-  ' "$FONT_HISTORY_FILE"
+    last // {}
+  '
 }
 
 list_rejected_fonts() {
-  if [[ ! -f "$FONT_HISTORY_FILE" ]]; then
-    return
-  fi
-
-  jq -s -c '
+  get_history | jq -c '
     group_by(.font) |
     map(
       . as $actions |
@@ -539,7 +530,7 @@ list_rejected_fonts() {
     map(select(. != null)) |
     sort_by(.rejected_date) | reverse |
     .[]
-  ' "$FONT_HISTORY_FILE"
+  '
 }
 
 # Rejected font names, one per line. One jq over the whole history, rather than

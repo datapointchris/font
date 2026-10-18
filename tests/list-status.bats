@@ -85,6 +85,17 @@ font() {
   assert_line "Dropped Mono"
 }
 
+@test "a rejection filed under a font's old name holds under its registry name" {
+  # History is never rewritten when a family is renamed, so every reader goes
+  # through get_history, which maps the old spelling to the registry's.
+  use_fixture_font_registry "Fira Code Nerd Font"
+  add_history_record "2025-01-01T00:00:00Z" "FiraCode Nerd Font" reject "too wide"
+
+  run font list --status rejected
+  assert_success
+  assert_output "Fira Code Nerd Font"
+}
+
 @test "a status outside the enum is a usage error, not an empty list" {
   run font list --status nonsense
   assert_failure 2

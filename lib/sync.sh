@@ -121,12 +121,7 @@ _sync_fetch_file() {
 _sync_own_records() {
   local machine_id="$1"
 
-  [[ -f "$FONT_HISTORY_FILE" ]] || return 0
-
-  jq -s -c --arg me "$machine_id" "
-    map($_JQ_NORMALIZE_FONT_NAMES | $_JQ_NORMALIZE_MACHINE) |
-    map(select(.machine == \$me)) | sort_by(.ts) | .[]
-  " "$FONT_HISTORY_FILE"
+  get_history_raw | jq -c --arg me "$machine_id" 'select(.machine == $me)'
 }
 
 # Create new gist seeded with this machine's file
