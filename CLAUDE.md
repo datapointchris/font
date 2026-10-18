@@ -32,9 +32,9 @@ Three places got this wrong at once, and one help request tripped all three.
 
 `tests/flag-arguments.bats` pins all three.
 
-## Tests are bats; `tests/test` is not what CI runs
+## Tests are bats, at the top of `tests/`
 
-CI runs `bats tests/`, which reads the `.bats` files at the top of `tests/` and does not recurse. `tests/test` is a separate hand-rolled runner it never executes, so a check that has to gate a merge belongs in a `.bats` file using `tests/helpers.bash`.
+CI runs `bats tests/`, which reads the `.bats` files at the top of `tests/` and does not recurse, so a suite belongs there and loads `tests/helpers.bash`.
 
 ## `font random` weights by recency, and every managed font stays reachable
 
