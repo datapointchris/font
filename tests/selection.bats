@@ -119,13 +119,17 @@ at_days_offset() {
   assert_output "yes"
 }
 
-@test "get_recently_used lists each font once, newest apply first" {
+@test "get_recently_used lists each font this machine applied once, newest first, past a synced machine's later apply" {
   # `font last` toggles between the first two. Alphabetical order would put
-  # Newer Mono first, which is the order a name-keyed dedupe leaves behind.
-  add_history_record "2025-01-01T00:00:00Z" "Older Mono" apply
-  add_history_record "2025-01-02T00:00:00Z" "Newer Mono" apply
-  add_history_record "2025-01-03T00:00:00Z" "Older Mono" apply
-  add_history_record "2025-01-04T00:00:00Z" "Newest Mono" apply
+  # Newer Mono first, which is the order a name-keyed dedupe leaves behind. A
+  # synced row from another machine's schedule never reached this screen.
+  local here
+  here=$(get_machine_id)
+  add_history_record "2025-01-01T00:00:00Z" "Older Mono" apply "" "$here"
+  add_history_record "2025-01-02T00:00:00Z" "Newer Mono" apply "" "$here"
+  add_history_record "2025-01-03T00:00:00Z" "Older Mono" apply "" "$here"
+  add_history_record "2025-01-04T00:00:00Z" "Newest Mono" apply "" "$here"
+  add_history_record "2025-01-05T00:00:00Z" "Elsewhere Mono" apply "" "elsewhere"
 
   run pipeline "get_recently_used 2 | jq -r '.[].font'"
   assert_success

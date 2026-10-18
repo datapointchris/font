@@ -126,7 +126,7 @@ A font's weight grows with the days since it was last applied, up to a cap, and 
 starts at the cap. Apply count is the wrong axis. Counts bunch together and separate nothing, and a
 font added at zero applies would be the only thing a count-based draw returned until it caught up.
 
-`last` toggles between the two fonts most recently applied in the history.
+`last` toggles between the two fonts most recently applied on this machine.
 
 ## `like`, `dislike`, `note`, `reject` — opinions about the font on screen, in the same log
 
