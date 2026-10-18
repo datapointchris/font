@@ -34,6 +34,18 @@ is_sync_enabled() {
     && jq -e '.enabled == true' "$FONT_SYNC_STATE_FILE" &>/dev/null
 }
 
+# Why is_sync_enabled said no, on stderr, for the commands a person types. The
+# automatic callers check is_sync_enabled first and stay quiet.
+_sync_explain_disabled() {
+  if _is_dev_mode; then
+    echo "Error: sync is disabled in dev mode" >&2
+  elif [[ ! -f "$FONT_SYNC_STATE_FILE" ]]; then
+    echo "Error: sync is not set up. Run 'font sync init'." >&2
+  else
+    echo "Error: sync is off. Run 'font sync on' to resume it." >&2
+  fi
+}
+
 # Get gist ID from state
 _sync_get_gist_id() {
   if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
@@ -80,17 +92,29 @@ _sync_history_filename() {
 # The per-machine files, which is deliberately not the pre-split "history.jsonl".
 # A machine on an older release still writes the whole merged set to that name —
 # reading it back would restore the union this replaces.
+#
+# Fails when the gist cannot be read, so an unreachable gist is never mistaken
+# for one that holds no machine's file yet.
 _sync_remote_files() {
   local gist_id="$1"
+  local listing
 
-  gh gist view "$gist_id" --files 2>/dev/null | grep -E '^history-.+\.jsonl$' || true
+  if ! listing=$(gh gist view "$gist_id" --files 2>/dev/null); then
+    echo "Error: could not read gist $gist_id. 'font sync status' checks gh." >&2
+    return 1
+  fi
+
+  grep -E '^history-.+\.jsonl$' <<<"$listing" || true
 }
 
 _sync_fetch_file() {
   local gist_id="$1"
   local filename="$2"
 
-  gh gist view "$gist_id" --filename "$filename" --raw 2>/dev/null || true
+  if ! gh gist view "$gist_id" --filename "$filename" --raw 2>/dev/null; then
+    echo "Error: could not read $filename from gist $gist_id" >&2
+    return 1
+  fi
 }
 
 # This machine's rows, normalized and sorted — what its file in the gist holds.
@@ -180,10 +204,16 @@ sync_init() {
   if [[ -n "$gist_id" ]]; then
     echo "Found existing gist: $gist_id"
 
-    # Pull and merge with local
+    # Saved before the pull, which reads the gist id from the state file and
+    # does nothing while sync is not enabled.
+    _sync_update_state "$gist_id" true
+
     echo "Merging with local history..."
     if sync_pull; then
       echo "✓ Merged remote history"
+    else
+      echo "✗ Could not merge remote history. Sync is on, and the next pull retries." >&2
+      return 1
     fi
   else
     echo "Creating new gist..."
@@ -195,10 +225,8 @@ sync_init() {
     fi
 
     echo "Created gist: $gist_id"
+    _sync_update_state "$gist_id" true
   fi
-
-  # Save state
-  _sync_update_state "$gist_id" true
 
   echo ""
   echo "✓ Sync initialized!"
@@ -206,36 +234,47 @@ sync_init() {
   echo "  History will sync automatically."
 }
 
-# Pull from gist and merge
+# Pull from gist and merge. Fails, leaving the local history as it was, when
+# sync is off or any machine's file cannot be read.
 sync_pull() {
   if ! is_sync_enabled; then
-    return 0
+    _sync_explain_disabled
+    return 1
   fi
 
   local gist_id
   gist_id=$(_sync_get_gist_id)
 
   if [[ -z "$gist_id" ]]; then
+    echo "Error: no gist id in $FONT_SYNC_STATE_FILE. Run 'font sync init'." >&2
     return 1
   fi
 
-  local machine_id own_file
+  local machine_id own_file remote_files
   machine_id=$(get_machine_id)
   own_file=$(_sync_history_filename)
+  remote_files=$(_sync_remote_files "$gist_id") || return 1
 
   # Every machine's file but this one's. This machine's rows come from local,
   # which is what lets a row written since the last push survive a pull.
-  local remote_content="" filename
+  #
+  # A file that cannot be fetched fails the whole pull. Merging without it
+  # would drop that machine's rows from the local history.
+  local remote_content="" filename content
   while IFS= read -r filename; do
     [[ -z "$filename" || "$filename" == "$own_file" ]] && continue
-    remote_content+="$(_sync_fetch_file "$gist_id" "$filename")"$'\n'
-  done < <(_sync_remote_files "$gist_id")
+    content=$(_sync_fetch_file "$gist_id" "$filename") || return 1
+    remote_content+="$content"$'\n'
+  done <<<"$remote_files"
 
   local merged
-  merged=$(_sync_merge_histories "$FONT_HISTORY_FILE" "$machine_id" "$remote_content")
+  if ! merged=$(_sync_merge_histories "$FONT_HISTORY_FILE" "$machine_id" "$remote_content"); then
+    echo "Error: could not merge gist $gist_id into $FONT_HISTORY_FILE" >&2
+    return 1
+  fi
 
-  # An empty merge means every file was unreadable, never that history is empty —
-  # writing it back would erase this machine's own rows.
+  # Written only when the merge holds rows, so no failure that leaves it empty
+  # can truncate the history.
   if [[ -n "$merged" ]]; then
     echo "$merged" >"$FONT_HISTORY_FILE"
   fi
@@ -252,16 +291,19 @@ sync_pull() {
   return 0
 }
 
-# Push local history to gist
+# Pull, then upload this machine's rows to its own file in the gist. Fails when
+# sync is off, the gist cannot be read, or the upload is refused.
 sync_push() {
   if ! is_sync_enabled; then
-    return 0
+    _sync_explain_disabled
+    return 1
   fi
 
   local gist_id
   gist_id=$(_sync_get_gist_id)
 
   if [[ -z "$gist_id" ]]; then
+    echo "Error: no gist id in $FONT_SYNC_STATE_FILE. Run 'font sync init'." >&2
     return 1
   fi
 
@@ -269,8 +311,7 @@ sync_push() {
     return 0
   fi
 
-  # First pull to get any remote changes
-  sync_pull
+  sync_pull || return 1
 
   local own_file tmpdir slice
   own_file=$(_sync_history_filename)
@@ -283,33 +324,37 @@ sync_push() {
     return 0
   fi
 
+  local remote_files
+  if ! remote_files=$(_sync_remote_files "$gist_id"); then
+    rm -rf "$tmpdir"
+    return 1
+  fi
+
   # --filename replaces a file the gist already has; --add is the only way to
   # create one, and it names it after the local file's basename.
   local -a edit_args
-  if _sync_remote_files "$gist_id" | grep -qxF "$own_file"; then
+  if grep -qxF "$own_file" <<<"$remote_files"; then
     edit_args=(--filename "$own_file" "$slice")
   else
     edit_args=(--add "$slice")
   fi
 
-  local pushed=0
-  gh gist edit "$gist_id" "${edit_args[@]}" &>/dev/null && pushed=1
+  local gh_error
+  if ! gh_error=$(gh gist edit "$gist_id" "${edit_args[@]}" 2>&1 >/dev/null); then
+    rm -rf "$tmpdir"
+    echo "Error: could not write $own_file to gist $gist_id: $gh_error" >&2
+    return 1
+  fi
   rm -rf "$tmpdir"
 
-  if [[ "$pushed" -eq 1 ]]; then
-    # Update last sync time
-    if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
-      local timestamp
-      timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-      local state
-      state=$(cat "$FONT_SYNC_STATE_FILE")
-      echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' >"$FONT_SYNC_STATE_FILE"
-    fi
-    return 0
-  else
-    # Network error - silently continue
-    return 0
+  if [[ -f "$FONT_SYNC_STATE_FILE" ]]; then
+    local timestamp
+    timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    local state
+    state=$(cat "$FONT_SYNC_STATE_FILE")
+    echo "$state" | jq --arg ts "$timestamp" '.last_sync = $ts' >"$FONT_SYNC_STATE_FILE"
   fi
+  return 0
 }
 
 # Show sync status
@@ -393,30 +438,35 @@ sync_on() {
     echo "$state" | jq '.enabled = true' >"$FONT_SYNC_STATE_FILE"
     echo "✓ Sync enabled"
 
-    # Do an immediate sync
-    sync_pull
-    sync_push
+    if ! sync_pull || ! sync_push; then
+      echo "✗ The first sync failed. Sync stays on, and the next action retries." >&2
+      return 1
+    fi
   else
     echo "Sync was not initialized."
     echo "Run 'font sync init' first."
   fi
 }
 
-# Auto-sync wrapper for commands that modify history
-# Call this after log_action to push changes
+# Auto-sync wrapper for commands that modify history, called after log_action.
+# The push runs in the background, so its result is never known here and the
+# line says it started rather than that it succeeded.
 sync_after_action() {
   if is_sync_enabled; then
-    echo "✓ Synced via GitHub Gist"
+    echo "Syncing to GitHub Gist in the background"
     sync_push &>/dev/null &
     disown 2>/dev/null || true
   fi
 }
 
-# Auto-sync wrapper for commands that read history
-# Call this before showing font list or rankings
+# Auto-sync wrapper for the pickers, called before they read history. A failed
+# pull leaves the local history as it was, and the picker opens on that.
 sync_before_read() {
   if is_sync_enabled; then
-    sync_pull &>/dev/null || true
-    echo "✓ Synced via GitHub Gist"
+    if sync_pull &>/dev/null; then
+      echo "✓ Synced via GitHub Gist"
+    else
+      echo "✗ Could not sync with GitHub Gist; showing local history" >&2
+    fi
   fi
 }
