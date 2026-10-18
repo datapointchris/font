@@ -146,6 +146,34 @@ get_current_font_size() {
   esac
 }
 
+# The terminal size size-up and size-down choose, kept per machine and never
+# synced, since each screen wants its own. Like every size font writes, it is
+# meant for 0.74em digits, and each terminal gets it scaled to the font it shows.
+FONT_TERMINAL_SIZE_FILE="$FONT_STATE_DIR/terminal-size.json"
+
+# Until the first size-up or size-down, this is the size the terminal already
+# holds, or 17. It is recorded at once, because the next apply writes a scaled
+# size there, and reading that back as the choice would scale it twice.
+get_terminal_base_size() {
+  local size=""
+  if [[ -f "$FONT_TERMINAL_SIZE_FILE" ]]; then
+    size=$(jq -r '.size // empty' "$FONT_TERMINAL_SIZE_FILE" 2>/dev/null) || true
+  fi
+  if [[ -z "$size" ]]; then
+    size=$(get_current_font_size) || true
+    [[ "$size" == "Unknown" ]] && size=$(ghostty_get_size)
+    size="${size:-17}"
+    set_terminal_base_size "$size"
+  fi
+  printf '%s' "$size"
+}
+
+set_terminal_base_size() {
+  local size="$1"
+  mkdir -p "$FONT_STATE_DIR"
+  jq -n --argjson size "$size" '{size: $size}' >"$FONT_TERMINAL_SIZE_FILE"
+}
+
 terminal_apply_font() {
   local font="$1"
   local platform
@@ -180,43 +208,37 @@ terminal_apply_font() {
   fi
 }
 
+# Moves this machine's chosen size, then writes every terminal that size scaled
+# to the font it shows.
 change_font_size() {
   local delta="$1"
 
-  local current_size
-  current_size=$(get_current_font_size)
+  local current_size new_size
+  current_size=$(get_terminal_base_size)
+  new_size=$(jq -n --argjson size "$current_size" --argjson delta "$delta" '$size + $delta')
 
-  if [[ "$current_size" == "Unknown" ]]; then
-    terminal_unknown_error
-    return 1
-  fi
-  if [[ -z "$current_size" ]]; then
-    echo "Error: $(detect_terminal)'s font settings name no size" >&2
-    echo "Run 'font apply <name>' to write one" >&2
-    return 1
-  fi
-
-  local new_size=$((current_size + delta))
-
-  if [[ "$new_size" -lt 6 ]]; then
+  if jq -en --argjson size "$new_size" '$size < 6' >/dev/null; then
     echo "Error: Font size cannot be less than 6" >&2
     return 1
-  elif [[ "$new_size" -gt 72 ]]; then
+  elif jq -en --argjson size "$new_size" '$size > 72' >/dev/null; then
     echo "Error: Font size cannot be greater than 72" >&2
     return 1
   fi
 
-  # Update all terminal configs for consistency
-  ghostty_set_size "$new_size" 2>/dev/null || true
-  kitty_set_size "$new_size" 2>/dev/null || true
+  set_terminal_base_size "$new_size"
+
+  ghostty_set_size "$(calibrate_font_size "$(ghostty_get_font)" "$new_size")" 2>/dev/null || true
+  kitty_set_size "$(calibrate_font_size "$(kitty_get_font)" "$new_size")" 2>/dev/null || true
 
   local platform
   platform=$(detect_platform 2>/dev/null || echo "unknown")
   if [[ "$platform" == "wsl" ]]; then
-    windows_terminal_set_size "$new_size" 2>/dev/null || true
+    windows_terminal_set_size "$(calibrate_font_size "$(windows_terminal_get_font)" "$new_size")" 2>/dev/null || true
   fi
 
-  echo "$current_size → $new_size"
+  local font
+  font=$(ghostty_get_font)
+  echo "$current_size → $new_size, which ${font:-monospace} draws at $(calibrate_font_size "$font" "$new_size")"
 }
 
 # What a history row records about the terminal an action was typed in. The

@@ -15,10 +15,7 @@ kitty_get_font() {
 
 kitty_get_size() {
   if [[ -f "$KITTY_CONFIG_FILE" ]]; then
-    local size
-    size=$(font_trim "$(grep "^font_size" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_size //')")
-    # Remove decimal part if present
-    echo "${size%%.*}"
+    font_trim "$(grep "^font_size" "$KITTY_CONFIG_FILE" 2>/dev/null | sed 's/^font_size //')"
   else
     echo ""
   fi
@@ -27,14 +24,13 @@ kitty_get_size() {
 kitty_set_font() {
   local font="$1"
   local size
-  size=$(kitty_get_size)
-  [[ -z "$size" ]] && size=17
+  size=$(calibrate_font_size "$font" "$(get_terminal_base_size)")
 
   mkdir -p "$KITTY_CONFIG_DIR"
 
   cat >"$KITTY_CONFIG_FILE" <<EOF
 font_family ${font}
-font_size ${size}.0
+font_size ${size}
 EOF
 }
 
@@ -48,7 +44,7 @@ kitty_set_size() {
 
   cat >"$KITTY_CONFIG_FILE" <<EOF
 font_family ${font}
-font_size ${size}.0
+font_size ${size}
 EOF
 
   # Reload kitty config

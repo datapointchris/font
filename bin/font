@@ -42,8 +42,8 @@ commands_table() {
   info                 Browse fonts and view detailed history
   change               Interactive font picker (shows per-font stats)
   apply <font>         Apply font to all terminals (auto-logs)
-  size-up              Increase font size by 1
-  size-down            Decrease font size by 1
+  size-up              This machine's terminal size up 1, every font scaled to it
+  size-down            This machine's terminal size down 1, every font scaled to it
   like [message]       Like current font with optional reason
   dislike [message]    Dislike current font with optional reason
   note <message>       Add note to current font (message required)

@@ -53,8 +53,7 @@ EOF
 ghostty_set_font() {
   local font="$1"
   local size
-  size=$(ghostty_get_size)
-  [[ -z "$size" ]] && size=17
+  size=$(calibrate_font_size "$font" "$(get_terminal_base_size)")
 
   mkdir -p "$GHOSTTY_CONFIG_DIR"
 

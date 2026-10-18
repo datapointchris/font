@@ -92,7 +92,7 @@ font apply "Fira Code Nerd Font"   # by name; an unknown name lists the curated 
 font change                        # the fzf picker
 font random                        # weighted toward the font you have gone longest without
 font last                          # back to the font applied before this one
-font size-up                       # one point larger in every terminal; size-down is the reverse
+font size-up                       # this machine's terminal size one point larger; size-down is the reverse
 ```
 
 Each apply writes every app below that is present, whichever terminal you typed it in:
@@ -111,14 +111,19 @@ are written only when their config directory exists. An include file keeps a con
 version control clean: font rewrites its own file whole and edits nothing around it. Windows
 Terminal is the exception, and its `settings.json` is edited in place with a backup beside it.
 
-Waybar, Hyprlock and dunst draw every font at the same digit height. Fonts at one size do not:
-Serious Shanns draws its `0` at 0.662em and Monaspice Ne at 0.743em, so the second looks a size
-larger. Each size you state is read as meant for a font whose digits are 0.74em tall, then scaled by
-the registry's `digit_height` for the font applied. Waybar's scale is the `-gtk-dpi` font writes
-beside the family.
-GTK applies it to `pt` sizes and ignores `px` ones, which is why `style.css` states its size in `pt`.
-dunst's size is the one on your `dunstrc`'s own `font` line, or 10 when it has none, and the drop-in
-carries it scaled. A font with no `digit_height` is drawn at the size as stated.
+Every app above draws every font at the same digit height. Fonts at one size do not: Serious
+Shanns draws its `0` at 0.662em and Monaspice Ne at 0.743em, so the second looks a size larger.
+Each size you choose is read as meant for a font whose digits are 0.74em tall, then scaled by the
+registry's `digit_height` for the font applied. A font with no `digit_height` is drawn at the size
+as chosen.
+
+The terminal size is this machine's own, kept in `terminal-size.json` and never synced, since each
+screen wants its own. `size-up` and `size-down` move it, and every terminal is rewritten with it
+scaled to the font it shows. Until the first move it is the size your terminal already had.
+
+Waybar's scale is the `-gtk-dpi` font writes beside the family. GTK applies it to `pt` sizes and
+ignores `px` ones, which is why `style.css` states its size in `pt`. dunst's size is the one on your
+`dunstrc`'s own `font` line, or 10 when it has none, and the drop-in carries it scaled.
 
 Hyprlock's scale is `$font_scale`, a plain factor such as `1.118`. A label states its size inside its
 text, and hyprlang multiplies it when it reads the config:
@@ -290,7 +295,8 @@ display session to read, so the schedule does not run there.
 ~/.local/state/font/
 ├── history.jsonl      # the action log, one JSON record per line, merged from every machine
 ├── sync-state.json    # gist id, last sync time, whether sync is on
-└── schedule.json      # the outcome of the last scheduled check
+├── schedule.json      # the outcome of the last scheduled check
+└── terminal-size.json # this machine's terminal size, which size-up and size-down move
 ```
 
 A deleted history file is recreated empty by the next command. A font name recorded under an older

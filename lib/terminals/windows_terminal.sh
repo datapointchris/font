@@ -50,7 +50,7 @@ windows_terminal_set_font() {
   settings=$(_windows_terminal_find_settings) || return 1
 
   local size
-  size=$(windows_terminal_get_size)
+  size=$(calibrate_font_size "$font" "$(get_terminal_base_size)")
 
   cp "$settings" "${settings}.backup"
 
@@ -58,7 +58,7 @@ windows_terminal_set_font() {
   jq --arg font "$font" --argjson size "$size" '
     .profiles.defaults.font = (.profiles.defaults.font // {}) + {face: $font, size: $size} |
     .profiles.list = [.profiles.list[] |
-      if .font != null then .font.face = $font
+      if .font != null then .font.face = $font | .font.size = $size
       else . + {font: {face: $font, size: $size}}
       end
     ]
