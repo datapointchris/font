@@ -161,8 +161,10 @@ font keeps two signals and never blends them:
 
 - **Stated preference** is likes minus dislikes.
 - **Revealed preference** is how long each font was active. It is reconstructed from the gap
-  between consecutive `apply` records, and the font on screen counts up to now. A gap runs to the
-  next apply in the merged history, whichever machine made it.
+  between consecutive `apply` records on the same machine, and the font on screen counts up to
+  now. Another machine's apply says nothing about this screen, so it ends nothing here. Another
+  machine's latest apply counts for nothing until that machine applies again, since nothing here
+  knows when it ended.
 
 `font rank` shows the two as separate lists, because a font you keep reaching for is a different
 signal from one you liked once. Both lists rank only curated fonts that are not rejected.

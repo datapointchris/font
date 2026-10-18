@@ -1,9 +1,10 @@
 #!/usr/bin/env bats
 # What `font rank`, `font stats` and the per-font page read out of the history.
 #
-# Usage time is reconstructed from the gap to the next apply, and the open-ended
-# last apply counts only for the font on screen. No fixture applies the font the
-# sandbox reads as current, so every duration here is closed.
+# Usage time is reconstructed from the gap to the next apply on the same
+# machine, and the open-ended last apply counts only for the font on screen. No
+# fixture applies the font the sandbox reads as current, so every duration here
+# is closed.
 
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
@@ -42,9 +43,10 @@ Used Mono
 Liked Mono"
 }
 
-@test "back-to-back applies of one font are one session" {
+@test "back-to-back applies of one font are one session, which another machine's apply never ends" {
   add_history_record "2026-01-01T10:00:00Z" "Session Mono" apply
   add_history_record "2026-01-01T11:00:00Z" "Session Mono" apply
+  add_history_record "2026-01-01T11:30:00Z" "Elsewhere Mono" apply "" laptop
   add_history_record "2026-01-01T12:00:00Z" "Other Mono" apply
   add_history_record "2026-01-01T13:00:00Z" "Session Mono" apply
 
