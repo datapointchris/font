@@ -32,6 +32,16 @@ Three places got this wrong at once, and one help request tripped all three.
 
 `tests/flag-arguments.bats` pins all three.
 
+## The schedule reads only this machine's apply rows
+
+`font schedule` decides from this machine's latest apply and its `trigger`: `schedule` earns a turn of `FONT_SCHEDULE_TURN_HOURS`, and `manual` or no trigger the longer `FONT_SCHEDULE_HOLD_HOURS`, both in `lib/schedule.sh`. A check's outcome is read off the history row the apply wrote, never its exit status.
+
+A timer run has no terminal, which shapes three things. Its row carries machine and platform and no terminal fields, so the per-font page's terminal and size modes count only applies typed in a terminal. `random_font` falls back to this machine's latest apply for the font on screen, since `get_current_font` reads a terminal's file. Everything the apply restarts must leave the unit's cgroup, so waybar goes through `start_session_daemon` and the push runs in the foreground.
+
+`lib/schedule.sh`, `lib/storage.sh` and `lib/sync.sh` are near-copies of theme's. A fix to one is due in the other. Both timers wait for presence and both restart waybar, so font's checks run two minutes after theme's five-minute marks: two restarts at one moment can leave two bars.
+
+A timer turned on in dev mode carries `FONT_ENV=development` into its unit, so it reads and writes `.dev-data`. Like any dev-mode apply, it still writes the real terminal configs.
+
 ## Tests are bats, at the top of `tests/`
 
 CI runs `bats tests/`, which reads the `.bats` files at the top of `tests/` and does not recurse, so a suite belongs there and loads `tests/helpers.bash`.

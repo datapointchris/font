@@ -201,12 +201,58 @@ it. With one writer per file, deleting a row you wrote is an ordinary edit to th
 and no other machine can put it back. Merged rows are deduplicated on timestamp, machine, font and
 action, then sorted by time.
 
+## `schedule` — a timer changes the font while you are at the machine
+
+```bash
+font schedule on       # install the timer: a systemd user timer on Linux, a launchd agent on macOS
+font schedule status   # whether it is on, the font on screen, when the next change is due, the last check
+font schedule off      # remove the timer
+font schedule run      # one check, which is what the timer runs
+```
+
+The timer checks every five minutes. A font the schedule applied keeps the screen for six hours, and
+one you applied by hand keeps it for twelve. A due change waits until you are at the machine, so it
+lands while you are using it. On macOS that means input within the last ten minutes. On Linux it
+means logind marks your display session neither idle nor locked. The draw is `font random`'s.
+
+Every scheduled apply is logged with `"trigger":"schedule"`. So the history shows which fonts you
+switched away from and which stayed on until the timer replaced them.
+
+hypridle does not set logind's idle hint by itself. This listener in `hypridle.conf` does:
+
+```text
+listener {
+    timeout = 600
+    on-timeout = busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint b true
+    on-resume = busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint b false
+}
+```
+
+On Linux the timer runs in the systemd user manager, which carries only the environment your session
+gave it. A change needs `WAYLAND_DISPLAY` or `DISPLAY`, and under Hyprland its
+`HYPRLAND_INSTANCE_SIGNATURE`. Without them a check is recorded as blocked and changes nothing. A
+session that does not export them runs this at login:
+
+```bash
+systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE
+```
+
+`on` writes `~/.config/systemd/user/font-schedule.service` and `.timer`, or
+`~/Library/LaunchAgents/com.datapointchris.font-schedule.plist`. Each check records its outcome in
+`schedule.json`: waiting, away, blocked, applied or failed. A check counts as applied only when the
+history holds the row the apply wrote, whatever the apply's exit status. `status` warns when no
+check has run for fifteen minutes.
+
+A scheduled change reaches Ghostty at its next config reload or in a new window, the same as a font
+applied by hand. WSL has no display session to read, so the schedule does not run there.
+
 ## Where it writes — one history file, merged from every machine
 
 ```text
 ~/.local/state/font/
 ├── history.jsonl      # the action log, one JSON record per line, merged from every machine
-└── sync-state.json    # gist id, last sync time, whether sync is on
+├── sync-state.json    # gist id, last sync time, whether sync is on
+└── schedule.json      # the outcome of the last scheduled check
 ```
 
 A deleted history file is recreated empty by the next command. A font name recorded under an older

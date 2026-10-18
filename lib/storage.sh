@@ -434,6 +434,12 @@ get_recently_used() {
   '
 }
 
+# This machine's latest apply, as one history row, or nothing.
+get_machine_last_apply() {
+  get_history | jq -c --arg machine "$(get_machine_id)" \
+    'map(select(.action == "apply" and .machine == $machine)) | last // empty'
+}
+
 # The latest apply of a font made from a terminal. A scheduled apply has none to
 # describe.
 get_last_terminal_context() {

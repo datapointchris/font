@@ -79,6 +79,16 @@ add_history_record() {
   fi
 }
 
+# Appends one apply record carrying a trigger, "manual" or "schedule".
+#
+# Usage: add_apply_record <ts> <font> <trigger> [machine]
+add_apply_record() {
+  local ts="$1" font="$2" trigger="$3" machine="${4:-testbox}"
+  mkdir -p "$(dirname "$FONT_HISTORY_FILE")"
+  printf '{"ts":"%s","machine":"%s","font":"%s","action":"apply","trigger":"%s"}\n' \
+    "$ts" "$machine" "$font" "$trigger" >>"$FONT_HISTORY_FILE"
+}
+
 # Runs a pipeline in the shell the test is already in, so `run` can capture it.
 #
 # bats' `run` takes a command, not a pipeline, and `run bash -c "..."` spawns a
