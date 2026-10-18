@@ -18,8 +18,6 @@ setup() {
   source_font_libs
 }
 
-# The plain fallback screen is what a sandboxed HOME gets, since the formatting
-# library is not there to load.
 help_screen_verbs() {
   "$FONT_ROOT/bin/font" help \
     | sed -n '/^Commands$/,/^Examples$/p' \

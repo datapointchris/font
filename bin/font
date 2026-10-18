@@ -15,15 +15,6 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd -P)"
 FONT_APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Source formatting library for colorized help
-# Both paths are outside this repo and already guarded by -f, so shellcheck is
-# told to treat them as empty rather than reporting an unfollowable source.
-if [[ -f "$HOME/.local/shell/formatting.sh" ]]; then
-  source "$HOME/.local/shell/formatting.sh"
-elif [[ -f "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh" ]]; then
-  source "$HOME/dotfiles/platforms/common/.local/shell/formatting.sh"
-fi
-
 source "$FONT_APP_DIR/lib/lib.sh"
 source "$FONT_APP_DIR/lib/storage.sh"
 source "$FONT_APP_DIR/lib/terminal.sh"
@@ -97,47 +88,7 @@ verb_usage() {
 }
 
 usage() {
-  # Check if formatting functions are available
-  if command -v print_header &>/dev/null; then
-    print_section "Font Testing & Management" "yellow"
-
-    print_section "Commands" "blue"
-    commands_table
-
-    print_section "Examples" "yellow"
-    if command -v print_cyan &>/dev/null; then
-      echo "  $(print_cyan "font change")                         # Interactive picker"
-      echo "  $(print_cyan "font size-up")                        # Increase font size"
-      echo "  $(print_cyan "font size-down")                      # Decrease font size"
-      echo "  $(print_cyan "font like \"Great ligatures\"")         # Like with reason"
-      echo "  $(print_cyan "font dislike \"Too wide\"")             # Dislike with reason"
-      echo "  $(print_cyan "font note \"Good for prose\"")          # Add note"
-      echo "  $(print_cyan "font rank")                            # See rankings"
-      echo "  $(print_cyan "font log")                             # View history"
-    else
-      cat <<'EOF'
-  font change                         # Interactive picker
-  font size-up                        # Increase font size
-  font size-down                      # Decrease font size
-  font like "Great ligatures"         # Like with reason
-  font dislike "Too wide"             # Dislike with reason
-  font note "Good for prose"          # Add note
-  font rank                           # See rankings
-  font log                            # View history
-EOF
-    fi
-
-    print_section "Data Storage" "green"
-    cat <<'EOF'
-  History: ~/.local/state/font/history.jsonl
-
-  Single history file with terminal context, synced across machines.
-  View details: font log
-EOF
-
-  else
-    # Fallback for when formatting library is not available
-    cat <<'EOF'
+  cat <<'EOF'
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  Font Management
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -145,8 +96,8 @@ EOF
 Commands
 ─────────────────────────
 EOF
-    commands_table
-    cat <<'EOF'
+  commands_table
+  cat <<'EOF'
 
 Examples
 ─────────────────────────
@@ -167,7 +118,6 @@ Data Storage
   View details: font log
 
 EOF
-  fi
 }
 
 #==============================================================================

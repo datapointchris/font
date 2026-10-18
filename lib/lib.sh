@@ -12,7 +12,6 @@ _FONT_LIB_SOURCED=1
 # Directories and files
 FONT_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 FONT_APP_DIR="$(cd "$FONT_LIB_DIR/.." && pwd)"
-CODE_FONTS_DIR="${CODE_FONTS_DIR:-$HOME/Documents/code_fonts}"
 
 # Strip leading and trailing whitespace from a value read out of a config file.
 #
