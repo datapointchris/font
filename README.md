@@ -240,9 +240,10 @@ font schedule off      # remove the timer
 font schedule run      # one check, which is what the timer runs
 ```
 
-The timer checks every five minutes. A font the schedule applied keeps the screen for six hours, and
-one you applied by hand keeps it for twelve. A due change waits until you are at the machine, so it
-lands while you are using it. On macOS that means input within the last ten minutes. On Linux it
+The font changes at 04:00, 12:00 and 20:00 local time, at the first check in the hour after each
+that finds you at the machine. The timer checks every five minutes. A turn you are away for is
+skipped, so changes missed overnight never all land on your return. One you applied by hand holds
+for twelve hours. At the machine on macOS means input within the last ten minutes. On Linux it
 means logind marks your display session neither idle nor locked. The draw is `font random`'s.
 
 Every scheduled apply is logged with `"trigger":"schedule"`. So the history shows which fonts you

@@ -34,7 +34,7 @@ Three places got this wrong at once, and one help request tripped all three.
 
 ## The schedule reads only this machine's apply rows
 
-`font schedule` decides from this machine's latest apply and its `trigger`: `schedule` earns a turn of `FONT_SCHEDULE_TURN_HOURS`, and `manual` or no trigger the longer `FONT_SCHEDULE_HOLD_HOURS`, both in `lib/schedule.sh`. A check's outcome is read off the history row the apply wrote, never its exit status.
+`font schedule` decides from this machine's latest apply and its `trigger`. Turns start at fixed local hours, `FONT_SCHEDULE_FIRST_TURN_HOUR` and every `FONT_SCHEDULE_TURN_HOURS` after, all in `lib/schedule.sh`. `schedule` leads to the next turn, and `manual` or no trigger to the first after `FONT_SCHEDULE_HOLD_HOURS`. A turn is taken at the first check within `FONT_SCHEDULE_WINDOW_MINUTES` that finds the user present, and skipped otherwise. A turn timed from the last apply and caught up on return landed every overdue change at the same moment, so another tool changing the desktop on its own timer changed with this one all day. Fixed hours, placed between that tool's, keep the two apart. A check's outcome is read off the history row the apply wrote, never its exit status.
 
 A timer run has no terminal. Its row carries machine and platform and no terminal fields, so the per-font page's terminal and size modes count only applies typed in a terminal. `random_font` falls back to this machine's latest apply for the font on screen, since `get_current_font` reads a terminal's file. Everything the apply restarts must leave the unit's cgroup, so waybar goes through `start_session_daemon` and the push runs in the foreground.
 

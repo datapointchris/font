@@ -103,9 +103,11 @@ schedule_help_details() {
   local login1="busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetIdleHint"
   cat <<EOF
 How it decides:
-  A font the schedule applied keeps the terminal for $FONT_SCHEDULE_TURN_HOURS hours. One you applied
-  by hand keeps it for $FONT_SCHEDULE_HOLD_HOURS. A due change waits until you are at the machine, so
-  it lands while you use it. The timer checks every $FONT_SCHEDULE_CHECK_MINUTES minutes.
+  The font changes at $(_schedule_turn_times), local time. Each change
+  lands at the first check within $FONT_SCHEDULE_WINDOW_MINUTES minutes of its turn that finds you at the
+  machine. A turn you are away for is skipped, so changes missed overnight never
+  all land on your return. One you applied by hand holds for $FONT_SCHEDULE_HOLD_HOURS hours.
+  The timer checks every $FONT_SCHEDULE_CHECK_MINUTES minutes.
 
   The draw is font random's: weighted toward the font you have gone longest
   without, and never the one on screen. Open Kitty windows redraw in it, and

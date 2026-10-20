@@ -6,7 +6,13 @@ set -euo pipefail
 [[ -n "${_FONT_SCHEDULE_SOURCED:-}" ]] && return 0
 _FONT_SCHEDULE_SOURCED=1
 
-FONT_SCHEDULE_TURN_HOURS=6
+# Turns start at fixed local hours rather than a span after the last apply. Another tool
+# changing the desktop on four-hour turns from 02:00 would land with this one, so these
+# start halfway between its own.
+FONT_SCHEDULE_TURN_HOURS=8
+FONT_SCHEDULE_FIRST_TURN_HOUR=4
+# A turn caught up later would land at the user's return, beside every change that waited too.
+FONT_SCHEDULE_WINDOW_MINUTES=60
 FONT_SCHEDULE_HOLD_HOURS=12
 FONT_SCHEDULE_CHECK_MINUTES=5
 # Another tool restarting waybar on the five-minute marks would race this one.
@@ -75,19 +81,43 @@ _schedule_mtime() {
   stat -c %Y "$1" 2>/dev/null || stat -f %m "$1"
 }
 
-# This machine's latest apply as {font, trigger, at, due}. A row with no trigger was applied by hand.
+# The local times turns start, as "04:00, 12:00 and 20:00".
+_schedule_turn_times() {
+  local hour list=""
+  for ((hour = FONT_SCHEDULE_FIRST_TURN_HOUR % FONT_SCHEDULE_TURN_HOURS; hour < 24; hour += FONT_SCHEDULE_TURN_HOURS)); do
+    if [[ -n "$list" ]]; then
+      if ((hour + FONT_SCHEDULE_TURN_HOURS >= 24)); then list+=" and "; else list+=", "; fi
+    fi
+    list+=$(printf '%02d:00' "$hour")
+  done
+  echo "$list"
+}
+
+# This machine's latest apply as {font, trigger, at}. A row with no trigger was applied by hand.
 schedule_last_apply() {
-  get_machine_last_apply | jq -c \
+  get_machine_last_apply | jq -c "$_JQ_TIMELINE_DEFS"'
+    {
+      font,
+      trigger: (.trigger // "manual"),
+      at: (.ts | parse_ts)
+    }'
+}
+
+# The start of the next turn at epoch $1: the first after the last apply, or its hold, still open.
+schedule_next_turn() {
+  local now="$1" last
+  last=$(schedule_last_apply)
+  jq -nr --argjson now "$now" --argjson last "${last:-null}" \
     --argjson turn "$((FONT_SCHEDULE_TURN_HOURS * 3600))" \
-    --argjson hold "$((FONT_SCHEDULE_HOLD_HOURS * 3600))" "$_JQ_TIMELINE_DEFS"'
-    (.trigger // "manual") as $trigger
-    | (.ts | parse_ts) as $at
-    | {
-        font,
-        trigger: $trigger,
-        at: $at,
-        due: ($at + (if $trigger == "schedule" then $turn else $hold end))
-      }'
+    --argjson first "$((FONT_SCHEDULE_FIRST_TURN_HOUR * 3600))" \
+    --argjson window "$((FONT_SCHEDULE_WINDOW_MINUTES * 60))" \
+    --argjson hold "$((FONT_SCHEDULE_HOLD_HOURS * 3600))" '
+    (if $last == null then null
+     elif $last.trigger == "schedule" then $last.at + 1
+     else $last.at + $hold end) as $earliest
+    | ([$earliest, $now - $window + 1] | max) as $from
+    | (($from | localtime | mktime) - $from) as $offset
+    | (($from + $offset - $first) / $turn | ceil) * $turn + $first - $offset'
 }
 
 # Prints why the user counts as away and succeeds, or prints "active" and fails.
@@ -126,8 +156,7 @@ schedule_away_reason() {
 schedule_decide() {
   local now="$1"
   local due
-  due=$(schedule_last_apply | jq -r '.due')
-  due="${due:-$now}"
+  due=$(schedule_next_turn "$now")
 
   if [[ "$now" -lt "$due" ]]; then
     printf 'waiting\t%s\t\n' "$due"
@@ -224,14 +253,13 @@ schedule_run() {
 
 # The line `font apply` prints while the schedule is on.
 schedule_next_change_line() {
-  local last
-  last=$(schedule_last_apply)
-  [[ -z "$last" ]] && return 0
+  local due
+  due=$(schedule_next_turn "$(date +%s)")
+  echo "Schedule: next turn $(_schedule_clock "$due"), taken if you are active $(_schedule_window_close "$due")"
+}
 
-  local due hours=$FONT_SCHEDULE_HOLD_HOURS
-  due=$(jq -r '.due' <<<"$last")
-  [[ "$(jq -r '.trigger' <<<"$last")" == "schedule" ]] && hours=$FONT_SCHEDULE_TURN_HOURS
-  echo "Schedule: next change after $(_schedule_clock "$due") (${hours} h, once you are active)"
+_schedule_window_close() {
+  jq -nr --argjson t "$(($1 + FONT_SCHEDULE_WINDOW_MINUTES * 60))" '$t | strflocaltime("before %H:%M")'
 }
 
 _schedule_write_systemd() {
@@ -339,8 +367,8 @@ schedule_on() {
   esac
 
   echo "✓ Schedule on, checking every $FONT_SCHEDULE_CHECK_MINUTES minutes"
-  echo "  A scheduled font gets $FONT_SCHEDULE_TURN_HOURS h and one applied by hand $FONT_SCHEDULE_HOLD_HOURS h."
-  echo "  A due change waits until you are active."
+  echo "  The font changes at $(_schedule_turn_times), at the first check"
+  echo "  within $FONT_SCHEDULE_WINDOW_MINUTES minutes that finds you active. One applied by hand holds $FONT_SCHEDULE_HOLD_HOURS h."
   _schedule_warn_idle_hint
 }
 
@@ -453,19 +481,21 @@ schedule_status() {
   last=$(schedule_last_apply)
   now=$(date +%s)
   if [[ -n "$last" ]]; then
-    local font at due how="by hand"
+    local font at how="by hand"
     font=$(jq -r '.font' <<<"$last")
     at=$(jq -r '.at' <<<"$last")
-    due=$(jq -r '.due' <<<"$last")
     [[ "$(jq -r '.trigger' <<<"$last")" == "schedule" ]] && how="by the schedule"
     echo "Current: $font, applied $how $(_schedule_clock "$at")"
-    if [[ "$on" == true ]]; then
-      if [[ "$now" -lt "$due" ]]; then
-        echo "Next change: after $(_schedule_clock "$due"), once you are active"
-      else
-        echo "Next change: due since $(_schedule_clock "$due"), at the first check while you are active"
-      fi
+  fi
+  if [[ "$on" == true ]]; then
+    local due
+    due=$(schedule_next_turn "$now")
+    if [[ "$now" -lt "$due" ]]; then
+      echo "Next change: $(_schedule_clock "$due"), if you are active $(_schedule_window_close "$due")"
+    else
+      echo "Next change: due since $(_schedule_clock "$due"), at the first check $(_schedule_window_close "$due") while you are active"
     fi
+    echo "Turns: $(_schedule_turn_times)"
   fi
 
   local reason

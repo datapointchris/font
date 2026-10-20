@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# When the schedule changes the font: the hold each kind of apply earns, the presence check, and
-# how font rank counts the turns it gave each font.
+# When the schedule changes the font: the turn each kind of apply leads to, the presence check,
+# and how font rank counts the turns it gave each font.
 
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
@@ -10,6 +10,13 @@ setup() {
   isolate_font_state
   source_font_libs
   source "$FONT_ROOT/lib/schedule.sh"
+  # Turns are local hours. A POSIX zone needs no tzdata: 04:00 local is 09:00Z.
+  export TZ=EST5
+}
+
+# Epoch seconds at an hour of 2026-01-01 UTC, past 24 into the next day.
+utc_hour() {
+  echo $((1767225600 + $1 * 3600))
 }
 
 # This machine, as get_machine_id reads it.
@@ -23,23 +30,33 @@ loginctl() {
   esac
 }
 
-@test "a hand apply holds the next change 12 hours, a scheduled one 6, and only this machine's count" {
+@test "the next turn follows a scheduled apply, waits out a hand apply's hold, and skips a missed window" {
   # No trigger is how every apply before the schedule reads, and it was applied by hand.
   add_history_record "2026-01-01T00:00:00Z" "Hand Mono" apply "" testbox
   add_apply_record "2099-01-01T00:00:00Z" "Elsewhere Mono" schedule otherbox
-  run pipeline "schedule_last_apply | jq -c '[.font, .trigger, .at, .due - .at]'"
-  assert_output '["Hand Mono","manual",1767225600,43200]'
+  # 19:00 local plus the 12-hour hold is 07:00, so the 12:00 turn.
+  run schedule_next_turn "$(utc_hour 0)"
+  assert_output "$(utc_hour 17)"
+
+  add_apply_record "2026-01-01T17:10:00Z" "Timer Mono" schedule
+  run schedule_next_turn "$(utc_hour 17)"
+  assert_output "$(utc_hour 25)"
+
+  # Away until 21:30 local, past the 20:00 turn's hour, so the 04:00 turn.
+  run schedule_next_turn "$(($(utc_hour 26) + 1800))"
+  assert_output "$(utc_hour 33)"
 
   # Written the way the timer writes it, so the key the reader expects is pinned.
   log_action apply "Timer Mono" "" schedule
-  run pipeline "schedule_last_apply | jq -c '[.font, .trigger, .due - .at]'"
-  assert_output '["Timer Mono","schedule",21600]'
+  run pipeline "schedule_last_apply | jq -r '.trigger'"
+  assert_output "schedule"
 }
 
 @test "a due change waits while the session is idle or locked, and goes ahead while it is active" {
   export PLATFORM=archlinux
-  add_apply_record "2026-01-01T00:00:00Z" "Timer Mono" schedule
-  local due=$((1767225600 + 6 * 3600))
+  add_apply_record "2026-01-01T17:10:00Z" "Timer Mono" schedule
+  local due
+  due=$(utc_hour 25)
 
   run pipeline "schedule_decide $((due - 60)) | cut -f1"
   assert_output "waiting"
