@@ -42,6 +42,8 @@ A timer run has no terminal. Its row carries machine and platform and no termina
 
 A timer turned on in dev mode is its own unit, `font-schedule-dev`, so it never replaces or removes the installed copy's. It carries `FONT_ENV=development`, so it reads and writes `.dev-data`. Like any dev-mode apply, it still writes the real terminal configs.
 
+On WSL the schedule never calls into Windows. A systemd unit there has no `WSL_INTEROP`, so it cannot start `cmd.exe` or `powershell.exe` (microsoft/WSL#8846, closed stale, not fixed). Presence is therefore the newest access time on the user's `/dev/pts` terminals, which moves when a terminal reads a keystroke and not when it is written to. `_windows_terminal_find_settings` globs `/mnt/c/Users` for the same reason rather than asking `cmd.exe` for the username. Do not reach for Windows' own idle time through PowerShell either. Endpoint monitoring on a managed laptop reads a Linux process starting Windows ones on a fixed interval as a pattern rather than an event. A timer run skips the terminal context, so it never reaches the `wmic.exe` resolution lookup either.
+
 ## Tests are bats, at the top of `tests/`
 
 CI runs `bats tests/`, which reads the `.bats` files at the top of `tests/` and does not recurse, so a suite belongs there and loads `tests/helpers.bash`.

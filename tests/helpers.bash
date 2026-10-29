@@ -37,6 +37,8 @@ source_font_libs() {
   source "$FONT_ROOT/lib/storage.sh"
   source "$FONT_ROOT/lib/terminal.sh"
   source "$FONT_ROOT/lib/sync.sh"
+  # On WSL the real one holds the developer's Windows Terminal settings.
+  export WINDOWS_USERS_DIR="$BATS_TEST_TMPDIR/windows-users"
 }
 
 # Points font discovery at a sandbox registry holding only the names given.

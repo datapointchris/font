@@ -2,27 +2,21 @@
 # Windows Terminal backend (for WSL)
 # Config format: JSON (settings.json)
 
+WINDOWS_USERS_DIR="/mnt/c/Users"
+
+# Globbed rather than asked of cmd.exe, which a systemd unit on WSL has no WSL_INTEROP to start.
+# A non-elevated process cannot list another profile's folder, so only the user's own matches.
 _windows_terminal_find_settings() {
-  local windows_user
-  windows_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n')
-
-  if [[ -z "$windows_user" ]]; then
-    return 1
-  fi
-
-  local paths=(
-    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
-    "/mnt/c/Users/$windows_user/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json"
-    "/mnt/c/Users/$windows_user/AppData/Local/Microsoft/Windows Terminal/settings.json"
-  )
-
-  for path in "${paths[@]}"; do
-    if [[ -f "$path" ]]; then
-      echo "$path"
+  local settings
+  for settings in \
+    "$WINDOWS_USERS_DIR"/*/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json \
+    "$WINDOWS_USERS_DIR"/*/AppData/Local/Packages/Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe/LocalState/settings.json \
+    "$WINDOWS_USERS_DIR"/*/AppData/Local/Microsoft/"Windows Terminal"/settings.json; do
+    if [[ -w "$settings" ]]; then
+      echo "$settings"
       return 0
     fi
   done
-
   return 1
 }
 

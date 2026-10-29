@@ -234,7 +234,7 @@ action, then sorted by time.
 ## `schedule` — a timer changes the font while you are at the machine
 
 ```bash
-font schedule on       # install the timer: a systemd user timer on Linux, a launchd agent on macOS
+font schedule on       # install the timer: a systemd user timer on Linux and WSL, a launchd agent on macOS
 font schedule status   # whether it is on, the font on screen, when the next change is due, the last check
 font schedule off      # remove the timer
 font schedule run      # one check, which is what the timer runs
@@ -244,7 +244,8 @@ The font changes at 04:00, 12:00 and 20:00 local time, at the first check in the
 that finds you at the machine. The timer checks every five minutes. A turn you are away for is
 skipped, so changes missed overnight never all land on your return. One you applied by hand holds
 for twelve hours. At the machine on macOS means input within the last ten minutes. On Linux it
-means logind marks your display session neither idle nor locked. The draw is `font random`'s.
+means logind marks your display session neither idle nor locked. On WSL it means a keystroke in
+one of your WSL terminals within the last ten minutes. The draw is `font random`'s.
 
 Every scheduled apply is logged with `"trigger":"schedule"`. So the history shows which fonts you
 switched away from and which stayed on until the timer replaced them. `font rank` counts both for
@@ -287,8 +288,12 @@ history holds the row the apply wrote, whatever the apply's exit status. `status
 check has run for three check intervals.
 
 A scheduled change redraws open Kitty windows, and open Ghostty windows on Linux. On macOS Ghostty
-shows it after a config reload or in a new window, the same as a font applied by hand. WSL has no
-display session to read, so the schedule does not run there.
+shows it after a config reload or in a new window, the same as a font applied by hand.
+
+On WSL the timer needs `systemd=true` under `[boot]` in `/etc/wsl.conf`. A systemd unit there
+cannot start Windows programs, so presence is read from the WSL terminals rather than from Windows,
+and Windows Terminal's `settings.json` is found under `/mnt/c/Users` without asking Windows for the
+username. WSL stops an idle distro once its last terminal closes, and the timer stops with it.
 
 ## Where it writes — one history file, merged from every machine
 

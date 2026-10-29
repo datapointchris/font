@@ -134,8 +134,11 @@ How it decides:
 
     systemctl --user import-environment WAYLAND_DISPLAY DISPLAY HYPRLAND_INSTANCE_SIGNATURE
 
-  font schedule status reports a check blocked without them. WSL has no display
-  session to read, so the schedule does not run there.
+  font schedule status reports a check blocked without them.
+
+  On WSL the timer needs systemd=true under [boot] in /etc/wsl.conf. Away means
+  no keystroke in any of your WSL terminals for $idle_minutes minutes, or none open.
+  WSL stops an idle distro, and the timer with it, once its last terminal closes.
 EOF
 }
 

@@ -52,7 +52,7 @@ loginctl() {
   assert_output "schedule"
 }
 
-@test "a due change waits while the session is idle or locked, and goes ahead while it is active" {
+@test "a due change waits while logind or the WSL terminals say you are away, and goes ahead while active" {
   export PLATFORM=archlinux
   add_apply_record "2026-01-01T17:10:00Z" "Timer Mono" schedule
   local due
@@ -70,6 +70,20 @@ loginctl() {
   assert_output "away"
 
   SESSION_HINTS=(IdleHint=no LockedHint=no)
+  run pipeline "schedule_decide $due | cut -f1"
+  assert_output "due"
+
+  export PLATFORM=wsl
+  FONT_SCHEDULE_TERMINALS_DIR="$BATS_TEST_TMPDIR/pts"
+  mkdir -p "$FONT_SCHEDULE_TERMINALS_DIR"
+  run pipeline "schedule_decide $due | cut -f1,3"
+  assert_output $'away\tno terminal open'
+
+  touch -a -d "@$(($(date +%s) - 660))" "$FONT_SCHEDULE_TERMINALS_DIR/0"
+  run pipeline "schedule_decide $due | cut -f1"
+  assert_output "away"
+
+  touch -a "$FONT_SCHEDULE_TERMINALS_DIR/0"
   run pipeline "schedule_decide $due | cut -f1"
   assert_output "due"
 }
