@@ -35,37 +35,49 @@ get_version() {
 }
 
 # The one place a verb's synopsis is written. verb_usage greps it, so a verb
-# added here answers --help without a second entry anywhere.
+# added here answers --help without a second entry anywhere. Section labels sit
+# at the margin and verb rows are indented, so the grep reads only the rows.
 commands_table() {
   cat <<'EOF'
+Reading what is on screen and in the history
   current              Show active font with full stats
   info                 Browse fonts and view detailed history
-  change               Interactive font picker (shows per-font stats)
-  apply <font>         Apply font to all terminals (auto-logs)
-  size-up              This machine's terminal size up 1, every font scaled to it
-  size-down            This machine's terminal size down 1, every font scaled to it
-  like [message]       Like current font with optional reason
-  dislike [message]    Dislike current font with optional reason
-  note <message>       Add note to current font (message required)
-  random               Apply a random font, weighted by time since last use
-  last                 Toggle to previously used font
   rank                 Show fonts ranked by likes and by hours, and their scheduled turns
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history
   list                 List all curated font families
   list --status <s>    Narrow to one state: active, rejected, all
+
+Choosing a font
+  change               Interactive font picker (shows per-font stats)
+  apply <font>         Apply font to all terminals (auto-logs)
+  random               Apply a random font, weighted by time since last use
+  last                 Toggle to previously used font
+  size-up              This machine's terminal size up 1, every font scaled to it
+  size-down            This machine's terminal size down 1, every font scaled to it
+
+Judging the font on screen
+  like [message]       Like current font with optional reason
+  dislike [message]    Dislike current font with optional reason
+  note <message>       Add note to current font (message required)
   reject <message>     Mark current font as rejected (avoids rediscovery)
   unreject             Restore a rejected font (fzf picker with history)
+
+Syncing the history between machines
   sync init            Set up cross-machine sync via GitHub Gist
   sync status          Show sync status
   sync push            Pull, then upload this machine's rows
   sync pull            Merge every other machine's rows in now
   sync off             Disable auto-sync
   sync on              Re-enable auto-sync
+
+Changing the font on a timer
   schedule on          Change the font on a timer while you are at the machine
   schedule off         Remove the timer
   schedule status      Show whether the schedule is on and when the next change is due
   schedule run         Check once, and change the font if its turn is due (the timer runs this)
+
+Installing fonts and updating font
   install              Install curated fonts from GitHub Release
   install --check      Show which curated fonts are missing
   update               Update font to latest release
