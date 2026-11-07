@@ -320,5 +320,7 @@ resolves for each family, and leaves a family this machine lacks as it was.
 
 `FONT_ENV=development` moves all of the state above into a gitignored `.dev-data/` inside the
 checkout and turns sync off, so working on font never touches real history. The repository's
-`.envrc` sets it through direnv. `scripts/seed-dev-data.sh` fills `.dev-data/` with a realistic
-fixture. `bats tests/` runs the suite, and every test points `HOME` at a temporary directory.
+`.envrc` sets it through direnv. `task setup` fills an empty `.dev-data/` with a realistic fixture,
+and `scripts/seed-dev-data.sh` regenerates it. `task test` runs the suite, and every test points
+`HOME` at a temporary directory. `task lint` and `task format` check and apply the shell style, and
+`task install` links this checkout's `bin/font` onto `PATH` in place of the release.

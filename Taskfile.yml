@@ -1,0 +1,50 @@
+version: "3"
+
+vars:
+  # Every shell file the shellcheck and shfmt hooks read: the CLI, the
+  # installer, the libraries and scripts, and the bats suites.
+  SHELL_FILES:
+    sh: git ls-files bin/font install.sh '*.sh' '*.bash' '*.bats' | tr '\n' ' '
+
+tasks:
+  default:
+    desc: List the tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # The dev fixture is gitignored, so a fresh checkout has none. A checkout
+  # that already holds one keeps it.
+  setup:
+    desc: Seed .dev-data with the fixture history that development mode reads
+    cmds:
+      - scripts/seed-dev-data.sh
+    status:
+      - test -s .dev-data/history.jsonl
+
+  test:
+    desc: Run the bats suites at the top of tests/
+    cmds:
+      - bats tests/
+
+  # shellcheck runs through its hook, so the version is the one the hook pins.
+  # The shfmt hook rewrites files, so the check calls shfmt with --diff instead.
+  lint:
+    desc: Run shellcheck and the shfmt check over every shell file, writing no file
+    cmds:
+      - pre-commit run shellcheck --all-files
+      - shfmt -d {{.SHELL_FILES}}
+
+  # The shfmt hook, so a file comes out exactly as a commit would leave it.
+  format:
+    desc: Rewrite every shell file in the .editorconfig style with shfmt
+    cmds:
+      - pre-commit run shfmt --all-files
+
+  # The release lives in its own clone, linked onto PATH by install.sh. This
+  # points the same link at the checkout instead, so the next `font` runs it.
+  install:
+    desc: Link this checkout's bin/font onto PATH in place of the release
+    cmds:
+      - mkdir -p "${FONT_BIN_DIR:-$HOME/.local/bin}"
+      - ln -sf "{{.ROOT_DIR}}/bin/font" "${FONT_BIN_DIR:-$HOME/.local/bin}/font"
