@@ -22,7 +22,7 @@ source "$FONT_APP_DIR/lib/sync.sh"
 source "$FONT_APP_DIR/lib/schedule.sh"
 
 # Sourced if present rather than required, so every command but `font update`
-# runs without it. `font update` says how to get it; the notice simply does not
+# runs without it. `font update` says how to get it, and the notice does not
 # appear. Re-running install.sh installs it.
 BASHSELFUPDATE_LOAD="${XDG_LIB_HOME:-$HOME/.local/lib}/bashselfupdate/load.bash"
 if [[ -f "$BASHSELFUPDATE_LOAD" ]]; then
@@ -1080,7 +1080,7 @@ main() {
   #
   # Never fails and never prints an error; `font update` is where update
   # failures surface. The commands skipped here are the ones a check would be
-  # pointless or harmful in — version is what a script parses, and the timer's
+  # pointless or harmful in. A script parses `version`'s output, and the timer's
   # run has nobody to read it.
   if declare -F bashselfupdate_notify &>/dev/null; then
     case "${1:-} ${2:-}" in

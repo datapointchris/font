@@ -66,7 +66,7 @@ echo 'config-file = ?fonts/current.conf' >>~/.config/ghostty/config     # ghostt
 echo 'gtk-custom-css = ?fonts/current.css' >>~/.config/ghostty/config   # and its tab labels, on Linux
 
 font change                    # pick a font in fzf and apply it, each one's record previewed beside it
-font current                   # the font this terminal's file names, with its record — proof it landed
+font current                   # the font this terminal's file names, with its record, to confirm the apply landed
 ```
 
 `font install` uses `~/fonts.tar.xz` when one exists and downloads nothing. That is the route for a
