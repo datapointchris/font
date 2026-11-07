@@ -11,6 +11,8 @@
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   load "$BATS_TEST_DIRNAME/helpers.bash"
   isolate_font_state
@@ -126,4 +128,12 @@ at_days_offset() {
   assert_success
   assert_output "Newest Mono
 Older Mono"
+}
+
+@test "font last with one font in history fails and writes nothing to stdout" {
+  add_history_record "2025-01-01T00:00:00Z" "Only Mono" apply "" "$(get_machine_id)"
+
+  run --separate-stderr "$FONT_ROOT/bin/font" last
+  assert_failure
+  assert_output ""
 }
