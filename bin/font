@@ -84,13 +84,54 @@ Installing fonts and updating font
 EOF
 }
 
-# Answers `font <verb> --help`. Every row whose first word is the verb, so a verb
-# with subcommands prints one row for each and a plain verb prints its own. A
-# verb whose rows cannot say how it behaves defines <verb>_help_details, which
-# prints under them.
+# The one place a verb's examples are written, each with the situation it
+# answers. verb_usage prints the rows that start with the verb, so every command
+# in commands_table needs at least one row here.
+examples_table() {
+  cat <<'EOF'
+  font current                              # What font is on screen, and how you have rated it
+  font info                                 # Pick any font and read its whole history
+  font rank                                 # Which fonts you like most and use longest
+  font stats                                # How evenly you spread your time across fonts
+  font log                                  # Every recorded action, and the file holding them
+  font list                                 # Every curated family, whatever its state
+  font list --status rejected               # Only the fonts you have taken out of rotation
+  font change                               # Pick a font, with its stats beside it
+  font apply "Hack Nerd Font"               # Apply one font by name to every terminal
+  font random                               # Let the draw pick, favoring the font unused longest
+  font last                                 # Go back to the font you had before this one
+  font size-up                              # Text too small on this machine
+  font size-down                            # Text too large on this machine
+  font like "great ligatures"               # Record why the current font works
+  font like                                 # Like the current font without a reason
+  font dislike "heavy at 11pt"              # Lower the current font in rank, keep it in the draw
+  font note "good for prose"                # Remember something about the current font
+  font reject "too wide at small sizes"     # Take the current font out of random and rank
+  font unreject                             # Bring a rejected font back into rotation
+  font sync init                            # First machine: create the Gist the history syncs through
+  font sync status                          # Whether sync is on, and when it last ran
+  font sync push                            # Send this machine's rows now
+  font sync pull                            # Take in the other machines' rows now
+  font sync off                             # Stop syncing after each action
+  font sync on                              # Sync after each action again
+  font schedule on                          # Change the font on a timer while you are at the machine
+  font schedule status                      # Whether the timer is on, and when the next change is due
+  font schedule run                         # Run the timer's check once by hand
+  font schedule off                         # Keep the current font until you change it yourself
+  font install                              # Install every curated font this machine is missing
+  font install --check                      # See which curated fonts are missing, installing nothing
+  font update                               # Move font to its latest release
+EOF
+}
+
+# Answers `font <verb> --help` and `font <verb> <subverb> --help`. Every row
+# whose first words are the verb, so a verb with subcommands prints one row for
+# each and a plain verb or a subverb prints its own. Its examples follow. A verb
+# whose rows cannot say how it behaves defines <verb>_help_details, which prints
+# under them.
 verb_usage() {
   local verb="$1"
-  local rows
+  local rows examples
   rows=$(commands_table | grep -E "^  ${verb}( |\$)" || true)
 
   if [[ -z "$rows" ]]; then
@@ -102,6 +143,12 @@ verb_usage() {
   while IFS= read -r row; do
     echo "  font ${row#  }"
   done <<<"$rows"
+  examples=$(examples_table | grep -E "^  font ${verb}( |\$)" || true)
+  if [[ -n "$examples" ]]; then
+    echo ""
+    echo "Examples:"
+    echo "$examples"
+  fi
   if declare -F "${verb}_help_details" &>/dev/null; then
     echo ""
     "${verb}_help_details"
@@ -1108,6 +1155,14 @@ main() {
   case "${2:-}" in
     --help | -h)
       verb_usage "${1:-}"
+      exit 0
+      ;;
+  esac
+  # A subverb answers it too. `font sync push --help` otherwise pushes, and
+  # `font schedule run --help` runs the timer's check.
+  case "${1:-} ${3:-}" in
+    "sync --help" | "sync -h" | "schedule --help" | "schedule -h")
+      verb_usage "$1 $2"
       exit 0
       ;;
   esac
