@@ -86,6 +86,10 @@ shows the font after a config reload or in a new window, and `apply` says so the
 
 Every verb answers `font <verb> --help` with its own synopsis. `font help` lists them all.
 
+`change`, `info` and `unreject` open their fzf picker only when stdin is a terminal. `--no-input`
+keeps it closed even on one. Without a terminal each exits 2 and names the form that takes the font
+as an argument: `font apply <font>`, `font info <font>` or `font unreject <font>`.
+
 ## `apply`, `change`, `random`, `last` — one font written to every app at once, and logged
 
 ```bash
@@ -166,6 +170,7 @@ font dislike "too wide"
 font note "good for prose"       # a note needs its message
 font reject "zero has no slash"  # out of random and the rankings; the reason is required
 font unreject                    # pick a rejected font in fzf, its history beside it
+font unreject "Hack Nerd Font"   # or name it, which is how a script restores one
 font list --status rejected      # the rejected families; active and all are the other two states
 ```
 
@@ -187,7 +192,7 @@ font: `font current` and `font info` render its history, rejection reason includ
 
 ```bash
 font current   # this terminal's font: description, history, stats and a 12-month usage sparkline
-font info      # the same page for any curated font, chosen in fzf
+font info      # the same page for any curated font, chosen in fzf, or named: font info "Hack Nerd Font"
 font rank      # one ranking by likes and one by hours used, then each font's scheduled turns
 font stats     # where the two signals disagree, how fast you try fonts, each machine's favorite
 font log       # every record, with the machine and terminal it came from

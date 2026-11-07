@@ -42,6 +42,7 @@ commands_table() {
 Reading what is on screen and in the history
   current              Show active font with full stats
   info                 Browse fonts and view detailed history
+  info <font>          Show one font's detailed history
   rank                 Show fonts ranked by likes and by hours, and their scheduled turns
   stats                Portfolio dashboard (divergence, discovery, per-machine)
   log                  View complete history, and the file it is read from
@@ -62,6 +63,7 @@ Judging the font on screen
   note <message>       Add note to current font (message required)
   reject <message>     Mark current font as rejected (avoids rediscovery)
   unreject             Restore a rejected font (fzf picker with history)
+  unreject <font>      Restore one rejected font by name
 
 Syncing the history between machines
   sync init            Set up cross-machine sync via GitHub Gist
@@ -91,6 +93,7 @@ examples_table() {
   cat <<'EOF'
   font current                              # What font is on screen, and how you have rated it
   font info                                 # Pick any font and read its whole history
+  font info "Hack Nerd Font"                # Read one font's whole history, from a script too
   font rank                                 # Which fonts you like most and use longest
   font stats                                # How evenly you spread your time across fonts
   font log                                  # Every recorded action, and the file holding them
@@ -108,6 +111,7 @@ examples_table() {
   font note "good for prose"                # Remember something about the current font
   font reject "too wide at small sizes"     # Take the current font out of random and rank
   font unreject                             # Bring a rejected font back into rotation
+  font unreject "Hack Nerd Font"            # Bring one back by name, from a script too
   font sync init                            # First machine: create the Gist the history syncs through
   font sync status                          # Whether sync is on, and when it last ran
   font sync push                            # Send this machine's rows now
@@ -217,6 +221,10 @@ usage() {
   draw. reject takes it out of random and rank until font unreject.
 
   Every command answers --help.
+
+  change, info and unreject open a picker only when stdin is a terminal.
+  --no-input keeps it closed anywhere, and each then names the font-taking
+  command to run instead: apply <font>, info <font> or unreject <font>.
 
 Commands
 ─────────────────────────
@@ -424,11 +432,70 @@ cmd_list() {
   esac
 }
 
-unreject_font_interactive() {
+# Set by --no-input, which keeps every picker closed even on a terminal.
+FONT_NO_INPUT=""
+
+# Opens the way for an fzf picker, or exits 2 naming the command that takes the
+# answer as an argument. fzf on a stdin that is not a terminal waits for input
+# that never comes, so a script calling a picker would hang with no output.
+#
+# Usage: require_picker <the same command with the font named>
+require_picker() {
+  local named="$1"
+  if [[ -n "$FONT_NO_INPUT" || ! -t 0 ]]; then
+    echo "Error: this command opens a picker, which needs a terminal and no --no-input." >&2
+    echo "Name the font instead: $named" >&2
+    exit 2
+  fi
   if ! command -v fzf &>/dev/null; then
     echo "Error: fzf not found. Install with: brew install fzf" >&2
     exit 1
   fi
+}
+
+# Exits 2 unless the font is one `font list` prints, suggesting near matches.
+#
+# `--` before the name, or grep reads it as its own flags: `grep -Fxq --help`
+# prints grep's help and exits 0 on GNU grep, so the check passes and a font
+# named "--help" gets applied.
+require_known_font() {
+  local font="$1"
+  local available_fonts
+  available_fonts=$(list_fonts)
+  if ! echo "$available_fonts" | grep -Fxq -- "$font"; then
+    local suggestions
+    suggestions=$(echo "$available_fonts" | grep -i -- "${font//[-_ ]/.*}" | head -5 || true)
+    {
+      echo "Error: Font '$font' not found"
+      if [[ -n "$suggestions" ]]; then
+        echo ""
+        echo "Did you mean:"
+        echo "  ${suggestions//$'\n'/$'\n'  }"
+      fi
+      echo ""
+      echo "Run 'font list' to see all available fonts."
+    } >&2
+    exit 2
+  fi
+}
+
+# Usage: unreject_font_cmd <font>
+unreject_font_cmd() {
+  local font="$1"
+  if ! get_rejected_font_ids | grep -Fxq -- "$font"; then
+    echo "Error: '$font' is not rejected" >&2
+    echo "Run 'font list --status rejected' to see the rejected fonts." >&2
+    exit 2
+  fi
+  unreject_font "$font"
+  sync_after_action
+  echo "Unrejected: $font"
+  echo ""
+  echo "This font is now available in the font list again."
+}
+
+unreject_font_interactive() {
+  require_picker "font unreject <font>"
 
   local rejected
   rejected=$(list_rejected_fonts)
@@ -532,11 +599,7 @@ PREVIEW_EOF
   rm -f "$preview_script"
 
   if [[ -n "$selected" ]]; then
-    unreject_font "$selected"
-    sync_after_action
-    echo "Unrejected: $selected"
-    echo ""
-    echo "This font is now available in the font list again."
+    unreject_font_cmd "$selected"
   fi
 }
 
@@ -775,10 +838,7 @@ show_current_font() {
 }
 
 show_font_info() {
-  if ! command -v fzf &>/dev/null; then
-    echo "Error: fzf not found. Install with: brew install fzf" >&2
-    exit 1
-  fi
+  require_picker "font info <font>"
 
   sync_before_read
 
@@ -855,10 +915,7 @@ show_log() {
 # ==============================================================================
 
 change_font() {
-  if ! command -v fzf &>/dev/null; then
-    echo "Error: fzf not found. Install with: brew install fzf" >&2
-    exit 1
-  fi
+  require_picker "font apply <font>"
 
   # Pull latest history before showing picker
   sync_before_read
@@ -1131,6 +1188,19 @@ install_fonts() {
 # ==============================================================================
 
 main() {
+  # --no-input may sit anywhere on the line, and is taken out before dispatch so
+  # no verb reads it as a font name or a message.
+  local arg args=()
+  for arg in "$@"; do
+    if [[ "$arg" == "--no-input" ]]; then
+      FONT_NO_INPUT=1
+    else
+      args+=("$arg")
+    fi
+  done
+  # The ${a[@]+...} form, because bash 3.2 under set -u calls an empty array unbound.
+  set -- ${args[@]+"${args[@]}"}
+
   # Prints inline to stderr before the command runs, which is the call site the
   # library documents. Deferring it to an EXIT trap would land it after the
   # command's output, but install_fonts already sets its own EXIT trap for a
@@ -1179,7 +1249,12 @@ main() {
       show_current_font
       ;;
     info)
-      show_font_info
+      if [[ -n "${2:-}" ]]; then
+        require_known_font "$2"
+        display_font_details "$2" "full"
+      else
+        show_font_info
+      fi
       ;;
     change)
       change_font
@@ -1190,28 +1265,7 @@ main() {
         verb_usage apply >&2
         exit 2
       fi
-      # Validate font name against installed fonts.
-      #
-      # `--` or the name is read as grep's own flags: `grep -Fxq --help` prints
-      # grep's help and exits 0 on GNU grep, so the check passes and a font named
-      # "--help" gets applied.
-      local available_fonts
-      available_fonts=$(list_fonts)
-      if ! echo "$available_fonts" | grep -Fxq -- "$2"; then
-        local suggestions
-        suggestions=$(echo "$available_fonts" | grep -i -- "${2//[-_ ]/.*}" | head -5 || true)
-        {
-          echo "Error: Font '$2' not found"
-          if [[ -n "$suggestions" ]]; then
-            echo ""
-            echo "Did you mean:"
-            echo "  ${suggestions//$'\n'/$'\n'  }"
-          fi
-          echo ""
-          echo "Run 'font list' to see all available fonts."
-        } >&2
-        exit 2
-      fi
+      require_known_font "$2"
       apply_font_cmd "$2"
       ;;
     size-up)
@@ -1248,7 +1302,11 @@ main() {
       mark_rejected "${@:2}"
       ;;
     unreject)
-      unreject_font_interactive
+      if [[ -n "${2:-}" ]]; then
+        unreject_font_cmd "$2"
+      else
+        unreject_font_interactive
+      fi
       ;;
     sync)
       case "${2:-}" in
