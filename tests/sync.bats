@@ -139,3 +139,20 @@ history-laptop.jsonl"
   assert_line --index 0 --partial '"font":"Monaspice Ne Nerd Font"'
   assert_line --index 1 --partial '"font":"Fira Code"'
 }
+
+# storage.sh decides the directory when it is sourced, so this sources it again
+# with its guard cleared. `run` calls it in a subshell, so nothing leaks out.
+state_paths_under() {
+  unset _FONT_STORAGE_SOURCED
+  export XDG_STATE_HOME="$1"
+  source "$FONT_ROOT/lib/sync.sh"
+  printf '%s\n' "$FONT_HISTORY_FILE" "$FONT_SYNC_STATE_FILE"
+}
+
+@test "the history and sync state live under XDG_STATE_HOME" {
+  local state_home="$BATS_TEST_TMPDIR/elsewhere-state"
+  run state_paths_under "$state_home"
+  assert_success
+  assert_line --index 0 "$state_home/font/history.jsonl"
+  assert_line --index 1 "$state_home/font/sync-state.json"
+}

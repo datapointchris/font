@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR=$(mktemp -d /tmp/font-curate-XXXX)
-FONTS_SRC="$HOME/.local/share/fonts"
+FONTS_SRC="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
 STAGING="$WORK_DIR/staging"
 OUTPUT="$SCRIPT_DIR/../fonts.tar.xz"
 

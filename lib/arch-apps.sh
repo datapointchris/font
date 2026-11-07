@@ -2,22 +2,27 @@
 # Arch-specific application backends (Waybar, Hyprlock, Dunst)
 # Uses include/source patterns to avoid modifying tracked dotfiles
 
+# Each app is written to only where its own config directory already exists.
+WAYBAR_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/waybar"
+HYPR_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+DUNST_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dunst"
+
 # Waybar: style.css imports fonts/current.css, which sets font-family and the
 # -gtk-dpi that calibrates style.css's pt font-size to the font. GTK3 has no
 # font-size-adjust, and -gtk-dpi scales pt sizes while leaving px ones alone.
-WAYBAR_FONTS_DIR="$HOME/.config/waybar/fonts"
+WAYBAR_FONTS_DIR="$WAYBAR_CONFIG_DIR/fonts"
 WAYBAR_FONTS_FILE="$WAYBAR_FONTS_DIR/current.css"
 
 # Hyprlock: Uses source and variables. $font_scale multiplies a label's size in a
 # hyprlang {{ }} expression inside a <span size="...pt">. font_size is an
 # integer setting that rejects a fractional result, and hyprlock's renderer
 # overrides a percentage span with its own scale of 1.
-HYPRLOCK_FONTS_DIR="$HOME/.config/hypr/fonts"
+HYPRLOCK_FONTS_DIR="$HYPR_CONFIG_DIR/fonts"
 HYPRLOCK_FONTS_FILE="$HYPRLOCK_FONTS_DIR/current.conf"
 
 # Dunst: Uses drop-in directory, at the size dunstrc states calibrated to the font
-DUNST_CONFIG_FILE="$HOME/.config/dunst/dunstrc"
-DUNST_DROPIN_DIR="$HOME/.config/dunst/dunstrc.d"
+DUNST_CONFIG_FILE="$DUNST_CONFIG_DIR/dunstrc"
+DUNST_DROPIN_DIR="$DUNST_CONFIG_DIR/dunstrc.d"
 DUNST_FONTS_FILE="$DUNST_DROPIN_DIR/99-font.conf"
 
 # Initialize Arch app config files if they don't exist
@@ -28,7 +33,7 @@ init_arch_configs() {
   [[ "$platform" != "archlinux" ]] && return 0
 
   # Waybar fonts
-  if [[ -d "$HOME/.config/waybar" ]]; then
+  if [[ -d "$WAYBAR_CONFIG_DIR" ]]; then
     if [[ ! -d "$WAYBAR_FONTS_DIR" ]]; then
       mkdir -p "$WAYBAR_FONTS_DIR"
     fi
@@ -43,7 +48,7 @@ EOF
   fi
 
   # Hyprlock fonts
-  if [[ -d "$HOME/.config/hypr" ]]; then
+  if [[ -d "$HYPR_CONFIG_DIR" ]]; then
     if [[ ! -d "$HYPRLOCK_FONTS_DIR" ]]; then
       mkdir -p "$HYPRLOCK_FONTS_DIR"
     fi
@@ -59,7 +64,7 @@ EOF
   fi
 
   # Dunst fonts (drop-in directory)
-  if [[ -d "$HOME/.config/dunst" ]]; then
+  if [[ -d "$DUNST_CONFIG_DIR" ]]; then
     if [[ ! -d "$DUNST_DROPIN_DIR" ]]; then
       mkdir -p "$DUNST_DROPIN_DIR"
     fi
@@ -164,15 +169,15 @@ arch_apply_font() {
   local font="$1"
   local applied=()
 
-  if [[ -d "$HOME/.config/waybar" ]]; then
+  if [[ -d "$WAYBAR_CONFIG_DIR" ]]; then
     waybar_set_font "$font" && applied+=("waybar")
   fi
 
-  if [[ -d "$HOME/.config/hypr" ]]; then
+  if [[ -d "$HYPR_CONFIG_DIR" ]]; then
     hyprlock_set_font "$font" && applied+=("hyprlock")
   fi
 
-  if [[ -d "$HOME/.config/dunst" ]]; then
+  if [[ -d "$DUNST_CONFIG_DIR" ]]; then
     dunst_set_font "$font" && applied+=("dunst")
   fi
 

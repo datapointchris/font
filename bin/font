@@ -942,10 +942,10 @@ _get_system_font_dir() {
       if [[ -n "$win_user" ]]; then
         echo "/mnt/c/Users/$win_user/AppData/Local/Microsoft/Windows/Fonts"
       else
-        echo "$HOME/.local/share/fonts"
+        echo "${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
       fi
       ;;
-    *) echo "$HOME/.local/share/fonts" ;;
+    *) echo "${XDG_DATA_HOME:-$HOME/.local/share}/fonts" ;;
   esac
 }
 

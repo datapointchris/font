@@ -19,7 +19,7 @@ _is_dev_mode() {
 if _is_dev_mode; then
   FONT_STATE_DIR="$_STORAGE_APP_DIR/.dev-data"
 else
-  FONT_STATE_DIR="$HOME/.local/state/font"
+  FONT_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/font"
 fi
 FONT_HISTORY_FILE="$FONT_STATE_DIR/history.jsonl"
 

@@ -2,7 +2,7 @@
 # Kitty terminal backend
 # Config format: key value (space-separated)
 
-KITTY_CONFIG_DIR="$HOME/.config/kitty/fonts"
+KITTY_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/fonts"
 KITTY_CONFIG_FILE="$KITTY_CONFIG_DIR/current.conf"
 
 kitty_get_font() {

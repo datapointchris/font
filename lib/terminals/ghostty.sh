@@ -11,7 +11,7 @@
 # It merges with any other gtk-custom-css file, such as one setting colors, via
 # ghostty's repeatable gtk-custom-css handling.
 
-GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty/fonts"
+GHOSTTY_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/fonts"
 GHOSTTY_CONFIG_FILE="$GHOSTTY_CONFIG_DIR/current.conf"
 GHOSTTY_CSS_FILE="$GHOSTTY_CONFIG_DIR/current.css"
 

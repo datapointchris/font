@@ -71,8 +71,9 @@ font current                   # the font this terminal's file names, with its r
 
 `font install` uses `~/fonts.tar.xz` when one exists and downloads nothing. That is the route for a
 machine that cannot reach GitHub. Otherwise it downloads `fonts.tar.xz` from this repository's
-`fonts-v1` release. It unpacks into `~/Library/Fonts` on macOS and `~/.local/share/fonts` on Linux.
-On WSL it unpacks into the Windows user's font directory and registers each font with Windows.
+`fonts-v1` release. It unpacks into `~/Library/Fonts` on macOS and `$XDG_DATA_HOME/fonts` on Linux,
+which is `~/.local/share/fonts` when that variable is unset. On WSL it unpacks into the Windows
+user's font directory and registers each font with Windows.
 
 The include lines are the one edit your config needs. Any font command creates either file when it
 is missing, naming `monospace` at size 17. The leading `?` tells Ghostty that a missing file is not
@@ -105,6 +106,8 @@ Each apply writes every app below that is present, whichever terminal you typed 
 | Waybar, on Arch | `~/.config/waybar/fonts/current.css` | `@import "fonts/current.css";` in `style.css`, and its `font-size` in `pt` |
 | Hyprlock, on Arch | `~/.config/hypr/fonts/current.conf` | `source = ~/.config/hypr/fonts/current.conf`, then `font_family = $font`, and each label's text in a sized span |
 | dunst, on Arch | `~/.config/dunst/dunstrc.d/99-font.conf` | nothing, since it is a drop-in |
+
+Each `~/.config` above is `$XDG_CONFIG_HOME` when that variable is set.
 
 The Ghostty and Kitty files are written whether or not either terminal is installed. The Arch apps
 are written only when their config directory exists. An include file keeps a config you track in
@@ -298,7 +301,7 @@ username. WSL stops an idle distro once its last terminal closes, and the timer 
 ## Where it writes — one history file, merged from every machine
 
 ```text
-~/.local/state/font/
+$XDG_STATE_HOME/font/  # ~/.local/state/font/ when XDG_STATE_HOME is unset
 ├── history.jsonl      # the action log, one JSON record per line, merged from every machine
 ├── sync-state.json    # gist id, last sync time, whether sync is on
 ├── schedule.json      # the outcome of the last scheduled check

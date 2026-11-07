@@ -6,8 +6,12 @@ set -euo pipefail
 
 _SYNC_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# storage.sh resolves FONT_STATE_DIR, the one place the state directory is
+# decided. It is guarded, so bin/font sourcing it too is free.
+source "$_SYNC_APP_DIR/lib/storage.sh"
+
 # Sync state file (alongside history)
-FONT_SYNC_STATE_FILE="${FONT_STATE_DIR:-$HOME/.local/state/font}/sync-state.json"
+FONT_SYNC_STATE_FILE="$FONT_STATE_DIR/sync-state.json"
 FONT_GIST_DESCRIPTION="font-preferences"
 
 # Check if gh CLI is installed and authenticated
