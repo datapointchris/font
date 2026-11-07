@@ -44,7 +44,7 @@ Reading what is on screen and in the history
   info                 Browse fonts and view detailed history
   rank                 Show fonts ranked by likes and by hours, and their scheduled turns
   stats                Portfolio dashboard (divergence, discovery, per-machine)
-  log                  View complete history
+  log                  View complete history, and the file it is read from
   list                 List all curated font families
   list --status <s>    Narrow to one state: active, rejected, all
 
@@ -189,10 +189,8 @@ Examples
 
 Data Storage
 ─────────────────────────
-  History: ~/.local/state/font/history.jsonl
-
   Single history file with terminal context, synced across machines.
-  View details: font log
+  font log prints it, and the file it is read from.
 
 EOF
 }
@@ -765,8 +763,10 @@ show_log() {
   local history
   history=$(get_history_raw)
 
+  # The help points here for where history lives, so an empty log names it too.
   if [[ -z "$history" ]]; then
     echo "No history yet. Start using fonts!"
+    echo "Data file: $FONT_HISTORY_FILE"
     return
   fi
 
