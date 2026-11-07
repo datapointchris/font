@@ -13,6 +13,8 @@
 load "$HOME/.local/lib/bats-support/load.bash"
 load "$HOME/.local/lib/bats-assert/load.bash"
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   load "$BATS_TEST_DIRNAME/helpers.bash"
   isolate_font_state
@@ -96,21 +98,26 @@ font() {
   assert_output "Fira Code Nerd Font"
 }
 
+# Each refusal is pinned by its exit code, by nothing reaching stdout, and by the
+# value the message is built from, never by the wording around it.
+
 @test "a status outside the enum is a usage error, not an empty list" {
-  run font list --status nonsense
+  run --separate-stderr font list --status nonsense
   assert_failure 2
-  assert_output --partial "no such status 'nonsense'"
-  assert_output --partial "active|rejected|all"
+  assert_output ""
+  assert_stderr --partial "'nonsense'"
+  assert_stderr --partial "active|rejected|all"
 }
 
 @test "--status with no value is a usage error" {
-  run font list --status
+  run --separate-stderr font list --status
   assert_failure 2
-  assert_output --partial "--status needs a value"
+  assert_output ""
 }
 
 @test "a bare argument to list is a usage error" {
-  run font list rejected
+  run --separate-stderr font list rejected
   assert_failure 2
-  assert_output --partial "takes no argument"
+  assert_output ""
+  assert_stderr --partial "'rejected'"
 }
