@@ -26,6 +26,30 @@ help_screen_verbs() {
     | awk '/^  [a-z]/ { print $1 }' | sort -u
 }
 
+# The bare words a command starts with, before its first flag or placeholder:
+# `list --status <s>` is `list`, `sync init` is `sync init`.
+leading_words() {
+  awk '{ out = ""; for (i = 1; i <= NF && $i ~ /^[a-z][a-z-]*$/; i++) out = out (out ? " " : "") $i; print out }'
+}
+
+# Each command the help screen's table names. A row's synopsis ends at the
+# first run of two spaces, where its description starts.
+help_screen_commands() {
+  "$FONT_ROOT/bin/font" help \
+    | sed -n '/^Commands$/,/^Examples$/p' \
+    | grep '^  [a-z]' | sed -E 's/^  //; s/  .*//' | leading_words | sort -u
+}
+
+# Each command a hint tells the reader to run: quoted as 'font ...' in the
+# source, or passed to require_picker for its no-terminal error.
+hinted_commands() {
+  {
+    grep -ho "'font [^']*'" "$FONT_ROOT/bin/font" "$FONT_ROOT"/lib/*.sh | tr -d "'"
+    grep -ho 'require_picker "font [^"]*"' "$FONT_ROOT/bin/font" \
+      | sed 's/^require_picker //' | tr -d '"'
+  } | sed 's/^font //' | leading_words | sort -u
+}
+
 assert_no_history() {
   [[ ! -s "$FONT_HISTORY_FILE" ]] || {
     echo "history written by a help request:" >&2
@@ -57,6 +81,16 @@ assert_no_history() {
   run "$FONT_ROOT/bin/font" reject -h
   [[ "$status" -eq 0 && "$output" == "$help" ]] || fail "font reject -h differs from --help: $output"
   assert_no_history
+}
+
+@test "every command a hint names is a command on the help screen" {
+  local commands hinted missing
+  commands=$(help_screen_commands)
+  hinted=$(hinted_commands)
+  [[ -n "$hinted" ]] || fail "no hint was found in the source"
+
+  missing=$(comm -23 <(echo "$hinted") <(echo "$commands"))
+  [[ -z "$missing" ]] || fail "hints name commands the help screen does not list: $missing"
 }
 
 @test "a mistyped command exits 2 with its error on stderr and nothing on stdout" {
