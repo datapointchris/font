@@ -92,13 +92,8 @@ as an argument: `font apply <font>`, `font info <font>` or `font unreject <font>
 
 ## `apply`, `change`, `random`, `last` — one font written to every app at once, and logged
 
-```bash
-font apply "Fira Code Nerd Font"   # by name; an unknown name lists the curated names that contain it
-font change                        # the fzf picker
-font random                        # weighted toward the font you have gone longest without
-font last                          # back to the font applied before this one
-font size-up                       # this machine's terminal size one point larger; size-down is the reverse
-```
+`apply` takes a curated name, and an unknown one lists the curated names that contain it. `change`
+picks one in fzf.
 
 Each apply writes every app below that is present, whichever terminal you typed it in:
 
@@ -164,15 +159,9 @@ font added at zero applies would be the only thing a count-based draw returned u
 
 ## `like`, `dislike`, `note`, `reject` — opinions about the font on screen, in the same log
 
-```bash
-font like "great ligatures"      # the reason is optional
-font dislike "too wide"
-font note "good for prose"       # a note needs its message
-font reject "zero has no slash"  # out of random and the rankings; the reason is required
-font unreject                    # pick a rejected font in fzf, its history beside it
-font unreject "Hack Nerd Font"   # or name it, which is how a script restores one
-font list --status rejected      # the rejected families; active and all are the other two states
-```
+`like` and `dislike` take an optional reason, and `note` and `reject` require one. `unreject` picks
+a rejected font in fzf with its history beside it, or takes the name, which is how a script restores
+one.
 
 These act on the font of the terminal you type them in, read from that terminal's own file. font
 knows Ghostty, Kitty and Windows Terminal by their environment variables. In any other terminal
@@ -190,13 +179,9 @@ font: `font current` and `font info` render its history, rejection reason includ
 
 ## `rank`, `stats`, `current`, `info`, `log` — what you said and what you used, kept apart
 
-```bash
-font current   # this terminal's font: description, history, stats and a 12-month usage sparkline
-font info      # the same page for any curated font, chosen in fzf, or named: font info "Hack Nerd Font"
-font rank      # one ranking by likes and one by hours used, then each font's scheduled turns
-font stats     # where the two signals disagree, how fast you try fonts, each machine's favorite
-font log       # every record, with the machine and terminal it came from
-```
+`current` shows this terminal's font with its description, history, stats and a 12-month usage
+sparkline. `info` shows the same page for any curated font. `log` prints every record with the
+machine and terminal it came from.
 
 font keeps two signals and never blends them:
 
@@ -217,19 +202,12 @@ each machine.
 
 ## `sync` — one history across machines, each machine writing only its own file
 
-```bash
-font sync init     # find the gist by its description, or create a secret one; run once per machine
-font sync status   # whether sync is on, the gist id, the last sync, whether gh is signed in
-font sync pull     # merge every other machine's rows in now
-font sync push     # pull, then upload this machine's rows now
-font sync off      # stop syncing; sync on resumes it and syncs at once
-```
-
-Sync runs by itself once initialized. Every logged action pushes in the background, and `change`
-and `info` pull before they open. `init` looks for a gist described as `font-preferences`, so a
+Sync runs by itself once `font sync init` has run on the machine. Every logged action pushes in
+the background, and `change` and `info` pull before they open. `init` looks for a gist described as `font-preferences`, so a
 second machine joins the first one's history rather than starting its own. The gist it creates is
 secret: unlisted, but readable by anyone holding its URL. Each record carries a hostname, a terminal
-and a screen resolution.
+and a screen resolution. `status` shows the gist id, the last sync and whether gh is signed in.
+`sync on` resumes syncing after `sync off` and syncs at once.
 
 The gist holds one file per machine, `history-<host>.jsonl`, named for the lowercased short
 hostname. Each machine writes only its own file. A pull takes every other machine's file as it
@@ -241,12 +219,8 @@ action, then sorted by time.
 
 ## `schedule` — a timer changes the font while you are at the machine
 
-```bash
-font schedule on       # install the timer: a systemd user timer on Linux and WSL, a launchd agent on macOS
-font schedule status   # whether it is on, the font on screen, when the next change is due, the last check
-font schedule off      # remove the timer
-font schedule run      # one check, which is what the timer runs
-```
+`font schedule on` installs the timer, a systemd user timer on Linux and WSL and a launchd agent on
+macOS. `status` shows the font on screen, when the next change is due and the last check.
 
 The font changes at 04:00, 12:00 and 20:00 local time, at the first check in the hour after each
 that finds you at the machine. The timer checks every five minutes. A turn you are away for is
