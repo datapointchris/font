@@ -99,3 +99,11 @@ assert_no_history() {
   assert_output ""
   assert_stderr --partial "Unknown command: nonsense"
 }
+
+@test "a mistyped command suggests the verbs it is near" {
+  run "$FONT_ROOT/bin/font" rnak
+  assert_failure 2
+  local suggested
+  suggested=$(printf '%s\n' "$output" | sed -n '/^Did you mean:$/,/^$/p' | awk '/^  / { print $1 }')
+  [[ "$suggested" == "rank" ]] || fail "suggested: $suggested"
+}

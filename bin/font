@@ -86,6 +86,38 @@ Installing fonts and updating font
 EOF
 }
 
+# Prints the verbs a mistyped command was likely meant to be: any verb within
+# two edits of it, and any verb it is the start of. The verbs are read from
+# commands_table, so a verb added there is suggested with no second list.
+#
+# Usage: suggest_commands <typed>
+suggest_commands() {
+  commands_table | awk -v typed="$1" '
+    function distance(a, b,    la, lb, i, j, cost, best, d) {
+      la = length(a)
+      lb = length(b)
+      for (i = 0; i <= la; i++) d[i, 0] = i
+      for (j = 0; j <= lb; j++) d[0, j] = j
+      for (i = 1; i <= la; i++) {
+        for (j = 1; j <= lb; j++) {
+          cost = (substr(a, i, 1) == substr(b, j, 1)) ? 0 : 1
+          best = d[i - 1, j - 1] + cost
+          if (d[i - 1, j] + 1 < best) best = d[i - 1, j] + 1
+          if (d[i, j - 1] + 1 < best) best = d[i, j - 1] + 1
+          d[i, j] = best
+        }
+      }
+      return d[la, lb]
+    }
+    /^  [a-z]/ { verbs[$1] = 1 }
+    END {
+      for (verb in verbs) {
+        if ((length(typed) >= 2 && index(verb, typed) == 1) || distance(typed, verb) <= 2) print verb
+      }
+    }
+  ' | sort
+}
+
 # The one place a verb's examples are written, each with the situation it
 # answers. verb_usage prints the rows that start with the verb, so every command
 # in commands_table needs at least one row here.
@@ -1416,9 +1448,18 @@ main() {
       exit 0
       ;;
     *)
-      echo "Unknown command: $1" >&2
-      echo "" >&2
-      usage >&2
+      local suggestions
+      suggestions=$(suggest_commands "$1")
+      {
+        echo "Unknown command: $1"
+        if [[ -n "$suggestions" ]]; then
+          echo ""
+          echo "Did you mean:"
+          echo "  ${suggestions//$'\n'/$'\n'  }"
+        fi
+        echo ""
+        echo "Run 'font --help' for every command."
+      } >&2
       exit 2
       ;;
   esac
