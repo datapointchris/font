@@ -11,12 +11,12 @@ OUTPUT="$SCRIPT_DIR/../fonts.tar.xz"
 echo "Working directory: $WORK_DIR"
 mkdir -p "$STAGING"
 
-# ── Step 1: Copy the 11 curated font families ──────────────────────────
+# ── Step 1: Copy the curated font families ─────────────────────────────
 
 echo ""
 echo "Step 1: Copying curated fonts..."
 
-# The 11 families (by filename prefix) — excludes rejected CaskaydiaCove and JetBrainsMonoNL
+# Families by filename prefix — excludes rejected CaskaydiaCove and JetBrainsMonoNL
 families=(
   "ComicMonoNF"
   "ComicShannsMonoNerdFont"
