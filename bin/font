@@ -549,74 +549,29 @@ unreject_font_interactive() {
     return
   fi
 
-  # Create preview script that shows font history
+  # Preview: the same details `font info` shows, then the rejection itself,
+  # which only this picker has a use for.
   local preview_script="/tmp/font-unreject-preview-$$.sh"
   cat >"$preview_script" <<'PREVIEW_EOF'
 #!/bin/bash
 font="$1"
 FONT_APP_DIR="$2"
 
-source "$FONT_APP_DIR/lib/storage.sh"
+source "$FONT_APP_DIR/lib/terminal.sh"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Font: $font"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+display_font_details "$font" "full"
 
-# Show rejection info
-echo "REJECTION INFO:"
-echo "───────────────────────────────────────────────────"
+echo "Rejection"
 rejection_info=$(get_rejected_font_info "$font")
 if [[ -n "$rejection_info" ]] && [[ "$rejection_info" != "{}" ]]; then
   rejected_date=$(echo "$rejection_info" | jq -r '.rejected_date // "unknown"')
   reason=$(echo "$rejection_info" | jq -r '.reason // "No reason"')
-  platforms=$(echo "$rejection_info" | jq -r '.platforms | join(", ") // "unknown"')
+  platforms=$(echo "$rejection_info" | jq -r '.platforms | join(", ")')
   echo "  Date: $rejected_date"
   echo "  Reason: $reason"
   echo "  Platforms: $platforms"
 else
   echo "  No rejection info found"
-fi
-echo ""
-
-# Show full history
-echo "FULL HISTORY:"
-echo "───────────────────────────────────────────────────"
-history=$(get_history | jq -c --arg font "$font" '.[] | select(.font == $font)')
-if [[ -n "$history" ]]; then
-  echo "$history" | while IFS= read -r line; do
-    ts=$(echo "$line" | jq -r '.ts')
-    action=$(echo "$line" | jq -r '.action')
-    platform=$(echo "$line" | jq -r '.platform')
-    message=$(echo "$line" | jq -r '.message // empty')
-
-    # Format timestamp
-    date_part="${ts:0:10}"
-
-    if [[ -n "$message" ]]; then
-      printf "  %s | %-8s | %s | %s\n" "$date_part" "$action" "$platform" "$message"
-    else
-      printf "  %s | %-8s | %s\n" "$date_part" "$action" "$platform"
-    fi
-  done
-else
-  echo "  No history found"
-fi
-echo ""
-
-# Show stats summary
-echo "STATS SUMMARY:"
-echo "───────────────────────────────────────────────────"
-stats=$(get_font_stats "$font" 2>/dev/null)
-if [[ -n "$stats" ]] && [[ "$stats" != "null" ]]; then
-  likes=$(echo "$stats" | jq -r '.likes // 0')
-  dislikes=$(echo "$stats" | jq -r '.dislikes // 0')
-  applies=$(echo "$stats" | jq -r '.applies // 0')
-  score=$(echo "$stats" | jq -r '.score // 0')
-  printf "  Score: %+d (%d likes, %d dislikes)\n" "$score" "$likes" "$dislikes"
-  echo "  Times applied: $applies"
-else
-  echo "  No stats available"
 fi
 PREVIEW_EOF
 
