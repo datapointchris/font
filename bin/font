@@ -455,16 +455,36 @@ cmd_list() {
     esac
   done
 
+  local fonts empty_state
   case "$status" in
-    all) list_fonts ;;
-    active) list_fonts_active ;;
-    rejected) list_fonts_rejected ;;
+    all)
+      fonts=$(list_fonts)
+      empty_state="No curated fonts in the registry."
+      ;;
+    active)
+      fonts=$(list_fonts_active)
+      empty_state="No active fonts. 'font unreject' brings a rejected font back."
+      ;;
+    rejected)
+      fonts=$(list_fonts_rejected)
+      empty_state="No rejected fonts. 'font reject <message>' takes the current font out of rotation."
+      ;;
     *)
       echo "Error: no such status '$status'" >&2
       echo "$FONT_LIST_USAGE" >&2
       exit 2
       ;;
   esac
+
+  # An empty list is a true answer, so it exits 0 with nothing on stdout for a
+  # script to read. A person at a terminal would see no output at all, which
+  # looks the same as a command that did nothing, so they get one line on
+  # stderr saying the list is empty and what would change it.
+  if [[ -z "$fonts" ]]; then
+    [[ -t 1 ]] && echo "$empty_state" >&2
+    return 0
+  fi
+  printf '%s\n' "$fonts"
 }
 
 # Set by --no-input, which keeps every picker closed even on a terminal.
