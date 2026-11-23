@@ -183,6 +183,12 @@ font: `font current` and `font info` render its history, rejection reason includ
 sparkline. `info` shows the same page for any curated font. `log` prints every record with the
 machine and terminal it came from.
 
+`current` reads the terminal it runs in, so it fails anywhere else. `current show` answers from
+anywhere: this machine's latest apply and its chosen size, read from local files with no sync. A
+script or a desktop binding asks it with `--json`, whose shape is
+[`schemas/current-show.schema.json`](schemas/current-show.schema.json). Until this machine records
+an apply, the family and its apply time are `null`.
+
 font keeps two signals and never blends them:
 
 - **Stated preference** is likes minus dislikes.

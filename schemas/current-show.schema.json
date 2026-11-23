@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:font:current-show:v1",
+  "title": "font current show --json",
+  "description": "This machine's current font, read from its local history and size file with no terminal and no sync. family, applied_at and trigger come from the latest apply this machine recorded, and are null when it has recorded none. Another machine's apply never counts, because it never reached this screen.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "family", "size", "applied_at", "trigger"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "family": {
+      "type": ["string", "null"],
+      "description": "The font family the latest apply wrote to every terminal, under the name the font registry uses."
+    },
+    "size": {
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0,
+      "description": "This machine's chosen terminal size in points, which size-up and size-down move. It is meant for 0.74em digits, and each terminal shows it scaled to the font's own digit width. Null until the first apply or size change records one."
+    },
+    "applied_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When the latest apply ran, in UTC."
+    },
+    "trigger": {
+      "enum": ["manual", "schedule", null],
+      "description": "Who applied it: manual for a command typed by hand, schedule for the timer."
+    }
+  }
+}

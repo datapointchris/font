@@ -41,6 +41,8 @@ commands_table() {
   cat <<'EOF'
 Reading what is on screen and in the history
   current              Show active font with full stats
+  current show         This machine's font and size, no terminal needed
+  current show --json  The same as JSON, for a script or a desktop binding
   info                 Browse fonts and view detailed history
   info <font>          Show one font's detailed history
   rank                 Rank fonts by likes, by hours, and by timer turns
@@ -124,6 +126,8 @@ suggest_commands() {
 examples_table() {
   cat <<'EOF'
   font current                    # The font on screen, and how you rated it
+  font current show               # This machine's font, from outside a terminal
+  font current show --json        # The same for a script: family, size, its apply
   font info                       # Pick any font and read its whole history
   font info "Hack Nerd Font"      # One font's whole history, from a script too
   font rank                       # Which fonts you like most and use longest
@@ -847,6 +851,42 @@ show_current_font() {
   display_font_details "$font" "full"
 }
 
+# Usage: cmd_current_show [--json]
+cmd_current_show() {
+  local as_json=false arg
+  for arg in "$@"; do
+    case "$arg" in
+      --json) as_json=true ;;
+      --help | -h)
+        verb_usage "current show"
+        return 0
+        ;;
+      *)
+        echo "Error: font current show takes no argument '$arg'" >&2
+        verb_usage "current show" >&2
+        exit 2
+        ;;
+    esac
+  done
+
+  local document
+  document=$(current_font_document)
+  if [[ "$as_json" == true ]]; then
+    printf '%s\n' "$document"
+    return 0
+  fi
+
+  if [[ "$(jq -r '.family' <<<"$document")" == "null" ]]; then
+    echo "No font applied on this machine yet."
+    return 0
+  fi
+  jq -r '
+    "Font:     \(.family)",
+    "Size:     \(.size // "not chosen yet")",
+    "Applied:  \(.applied_at), \(if .trigger == "schedule" then "by the schedule" else "by hand" end)"
+  ' <<<"$document"
+}
+
 show_font_info() {
   require_picker "font info <font>"
 
@@ -1223,7 +1263,7 @@ main() {
   # run has nobody to read it.
   if declare -F bashselfupdate_notify &>/dev/null; then
     case "${1:-} ${2:-}" in
-      "update "* | "--version "* | "-v "* | "schedule run") ;;
+      "update "* | "--version "* | "-v "* | "schedule run" | "current show") ;;
       *) bashselfupdate_notify font "$FONT_APP_DIR" ;;
     esac
   fi
@@ -1241,7 +1281,7 @@ main() {
   # A subverb answers it too. `font sync push --help` otherwise pushes, and
   # `font schedule run --help` runs the timer's check.
   case "${1:-} ${3:-}" in
-    "sync --help" | "sync -h" | "schedule --help" | "schedule -h")
+    "sync --help" | "sync -h" | "schedule --help" | "schedule -h" | "current --help" | "current -h")
       verb_usage "$1 $2"
       exit 0
       ;;
@@ -1256,7 +1296,15 @@ main() {
       cmd_list "${@:2}"
       ;;
     current)
-      show_current_font
+      case "${2:-}" in
+        "") show_current_font ;;
+        show) cmd_current_show "${@:3}" ;;
+        *)
+          echo "Error: no such current command '$2'" >&2
+          verb_usage current >&2
+          exit 2
+          ;;
+      esac
       ;;
     info)
       if [[ -n "${2:-}" ]]; then

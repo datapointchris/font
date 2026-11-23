@@ -20,12 +20,6 @@ setup() {
   source_font_libs
 }
 
-help_screen_verbs() {
-  "$FONT_ROOT/bin/font" help \
-    | sed -n '/^Commands$/,/^Examples$/p' \
-    | awk '/^  [a-z]/ { print $1 }' | sort -u
-}
-
 # The bare words a command starts with, before its first flag or placeholder:
 # `list --status <s>` is `list`, `sync init` is `sync init`.
 leading_words() {
@@ -58,13 +52,15 @@ assert_no_history() {
   }
 }
 
-@test "every verb on the help screen answers --help with its own rows without acting, and -h matches it" {
-  local verbs verb rows
-  verbs=$(help_screen_verbs)
-  [[ -n "$verbs" ]] || fail "the help screen yielded no verbs"
+@test "every command on the help screen answers --help with its own rows without acting, and -h matches it" {
+  local commands verb rows words
+  commands=$(help_screen_commands)
+  [[ -n "$commands" ]] || fail "the help screen yielded no commands"
 
-  while read -r verb; do
-    run "$FONT_ROOT/bin/font" "$verb" --help
+  # A subverb such as `sync push` is read as two words.
+  while read -r -a words; do
+    verb="${words[*]}"
+    run "$FONT_ROOT/bin/font" "${words[@]}" --help
     [[ "$status" -eq 0 ]] || fail "font $verb --help exited $status: $output"
     # The synopsis is the block under "Usage:", up to the first blank line.
     rows=$(awk '/^Usage:$/ { u = 1; next } u && /^$/ { exit } u' <<<"$output")
@@ -73,7 +69,7 @@ assert_no_history() {
       fail "font $verb --help printed a row for another verb"
     fi
     assert_no_history
-  done <<<"$verbs"
+  done <<<"$commands"
 
   # main() matches -h and --help in one case arm, so one verb proves -h.
   local help

@@ -174,6 +174,21 @@ set_terminal_base_size() {
   jq -n --argjson size "$size" '{size: $size}' >"$FONT_TERMINAL_SIZE_FILE"
 }
 
+# This machine's current font, as schemas/current-show.schema.json describes it.
+# A desktop binding runs it outside any terminal and offline, so it reads local files and never syncs.
+current_font_document() {
+  local apply size_file="$FONT_TERMINAL_SIZE_FILE"
+  apply=$(get_machine_last_apply)
+  [[ -f "$size_file" ]] || size_file=/dev/null
+  jq -n --argjson apply "${apply:-null}" --slurpfile size_file "$size_file" '{
+    schema_version: 1,
+    family: $apply.font,
+    size: (($size_file[0].size | numbers) // null),
+    applied_at: $apply.ts,
+    trigger: (if $apply == null then null else ($apply.trigger // "manual") end)
+  }'
+}
+
 terminal_apply_font() {
   local font="$1"
   local platform
